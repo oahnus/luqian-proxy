@@ -1,0 +1,7 @@
+proxy:
+  server:
+    port: 7766
+  admin:
+    token: "jivhwe;12n;cha#;adf"
+server:
+  port: 8080

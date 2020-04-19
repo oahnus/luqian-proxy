@@ -20,7 +20,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
 
-        <netty.version>4.1.36.Final</netty.version>
+        <netty.version>4.1.42.Final</netty.version>
         <lombok.version>1.18.10</lombok.version>
         <springboot.version>2.1.6.RELEASE</springboot.version>
         <msgback.version>0.6.12</msgback.version>

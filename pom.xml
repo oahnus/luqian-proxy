@@ -25,6 +25,9 @@
         <springboot.version>2.1.6.RELEASE</springboot.version>
         <msgback.version>0.6.12</msgback.version>
         <fastjson.version>1.2.56</fastjson.version>
+
+
+        <mysql.version>5.1.47</mysql.version>
     </properties>
 
     <dependencyManagement>
@@ -45,6 +48,12 @@
                 <groupId>org.msgpack</groupId>
                 <artifactId>msgpack</artifactId>
                 <version>${msgback.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql.version}</version>
             </dependency>
 
             <dependency>

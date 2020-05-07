@@ -55,7 +55,7 @@ public class Client implements OfflineListener {
     }
 
     public void start() {
-        System.out.println("Connect To Proxy Server");
+        System.out.println("Ready To Connect Proxy Server");
         clientBootstrap.connect(ClientConfig.serverHost, ClientConfig.serverPort).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {

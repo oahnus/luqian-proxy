@@ -3,8 +3,8 @@ package com.github.oahnus.proxyserver.handler.proxy;
 import com.github.oahnus.proxyprotocol.Consts;
 import com.github.oahnus.proxyprotocol.MessageType;
 import com.github.oahnus.proxyprotocol.NetMessage;
-import com.github.oahnus.proxyserver.config.ProxyTable;
-import com.github.oahnus.proxyserver.entity.ProxyTableItem;
+import com.github.oahnus.proxyserver.config.ProxyTableContainer;
+import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -59,7 +59,7 @@ public class ForwardHandler extends SimpleChannelInboundHandler<ByteBuf> {
         // 设置连接不可读
         outChannel.config().setOption(ChannelOption.AUTO_READ, false);
         // 查找开放接口对应内网的host:port地址
-        ProxyTableItem tableItem = ProxyTable.getInstance().getProxyMapping(port);
+        ProxyTable tableItem = ProxyTableContainer.getInstance().getProxyMapping(port);
         String hostPort = tableItem.getServiceAddr();
 
         String channelId = UUID.randomUUID().toString();

@@ -26,9 +26,12 @@ public class StatisticsHandler extends ChannelDuplexHandler {
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
         StatMeasure measure = TrafficMeasureMonitor.getStatMeasure(port);
-        measure.addInTrafficBytes(byteLen);
-
-        ctx.fireChannelRead(msg);
+        boolean res = measure.addInTrafficBytes(byteLen);
+        if (res) {
+            ctx.fireChannelRead(msg);
+        } else {
+            ctx.channel().close();
+        }
     }
 
     @Override

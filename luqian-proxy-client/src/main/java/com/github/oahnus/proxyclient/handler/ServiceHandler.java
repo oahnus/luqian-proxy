@@ -4,7 +4,6 @@ import com.github.oahnus.proxyclient.ClientChannelManager;
 import com.github.oahnus.proxyprotocol.Consts;
 import com.github.oahnus.proxyprotocol.MessageType;
 import com.github.oahnus.proxyprotocol.NetMessage;
-import com.sun.deploy.net.protocol.ProtocolType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;

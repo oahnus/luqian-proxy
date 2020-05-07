@@ -2,6 +2,8 @@ package com.github.oahnus.proxyserver.entity;
 
 import lombok.Data;
 
+import javax.persistence.Id;
+import javax.persistence.Transient;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -11,29 +13,43 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Data
 public class StatMeasure {
+    @Id
     private Long id;
     private String appId;
+    private Long userId;
     private int port;
+    @Transient
     private AtomicInteger connectCount = new AtomicInteger();
-    private transient long outTrafficBytes = 0;
-    private transient long inTrafficBytes = 0;
+    private transient Long outTrafficBytes = 0L;
+    private transient Long inTrafficBytes = 0L;
     private Date date;
+//    private Long trafficLimit = 700 * 1024 * 1024L; 700M
+    private Long remainTraffic = 5 * 1024L; // 5K
 
     public StatMeasure() { }
-    public StatMeasure(String appId, int port, Date date) {
+
+    public StatMeasure(Long sysUserId, String appId, int port) {
+        this.userId = sysUserId;
         this.appId = appId;
         this.port = port;
-        this.date = date;
+        this.date = new Date();
     }
 
-    public synchronized long addOutTrafficBytes(long bytesLen) {
+    public synchronized boolean addOutTrafficBytes(long bytesLen) {
+//        if((this.outTrafficBytes + this.inTrafficBytes) > trafficLimit) {
+//            return false;
+//        }
         this.outTrafficBytes += bytesLen;
-        return this.outTrafficBytes;
+        return true;
     }
 
-    public synchronized long addInTrafficBytes(long bytesLen) {
+    public synchronized boolean addInTrafficBytes(long bytesLen) {
+        // 检查流量限制
+        if((this.outTrafficBytes + this.inTrafficBytes) > remainTraffic) {
+            return false;
+        }
         this.inTrafficBytes += bytesLen;
-        return this.inTrafficBytes;
+        return true;
     }
 
     public int incrConnectCount() {

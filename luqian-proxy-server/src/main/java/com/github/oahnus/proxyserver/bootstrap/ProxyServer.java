@@ -3,8 +3,8 @@ package com.github.oahnus.proxyserver.bootstrap;
 import com.github.oahnus.proxyprotocol.IdleCheckHandler;
 import com.github.oahnus.proxyprotocol.ProxyProtocolDecoder;
 import com.github.oahnus.proxyprotocol.ProxyProtocolEncoder;
-import com.github.oahnus.proxyserver.config.ProxyTable;
-import com.github.oahnus.proxyserver.entity.ProxyTableItem;
+import com.github.oahnus.proxyserver.config.ProxyTableContainer;
+import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.handler.proxy.ForwardHandler;
 import com.github.oahnus.proxyserver.handler.proxy.ProxyServerHandler;
 import com.github.oahnus.proxyserver.handler.stat.StatisticsHandler;
@@ -15,9 +15,9 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 14:37.
  */
 @Component
+@Slf4j
 public class ProxyServer implements Observer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -66,9 +67,9 @@ public class ProxyServer implements Observer {
     public void start() throws InterruptedException {
         ChannelFuture future = serverBootstrap.bind(7766).sync();
         if (future.isSuccess()) {
-            System.out.println("success");
+            log.debug("[ProxyServer].start - Netty Start Success Listening On " + 7766);
+            System.out.println("[ProxyServer].start - Netty Start Success Listening On " + 7766);
         }
-        System.out.println("netty server Start Listening On " + 7766);
 
         ServerBootstrap forwardBootstrap = new ServerBootstrap();
         forwardBootstrap.group(bossGroup, workerGroup)
@@ -81,15 +82,15 @@ public class ProxyServer implements Observer {
             }
         });
 
-        try {
-            ProxyTable.loadFromDisk();
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Load Config Error");
-        }
+//        try {
+//            ProxyTableConfig.loadFromDisk();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            System.err.println("Load Config Error");
+//        }
 
         // 将ProxyServer添加为观察者, 监听代理配置信息的改变
-        ProxyTable.getInstance().addObserver(this);
+        ProxyTableContainer.getInstance().addObserver(this);
 
         // 启动Server
         startForwardServer();
@@ -97,16 +98,17 @@ public class ProxyServer implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
-        ProxyTable proxyTable = (ProxyTable) o;
+        ProxyTableContainer proxyTable = (ProxyTableContainer) o;
         // 配置信息已修改
         startForwardServer();
     }
 
     private void startForwardServer() {
-        Map<Integer, ProxyTableItem> proxyTableItemMap = ProxyTable.getInstance().proxyTableItemMap();
+        Map<Integer, ProxyTable> proxyTableMap = ProxyTableContainer.getInstance().proxyTableItemMap();
+
         // 关闭失效端口
         for (Integer port : futureMap.keySet()) {
-            if (!proxyTableItemMap.containsKey(port)) {
+            if (!proxyTableMap.containsKey(port)) {
                 // 端口 port 已取消映射
                 ChannelFuture future = futureMap.get(port);
                 future.channel().close();
@@ -116,14 +118,15 @@ public class ProxyServer implements Observer {
             }
         }
 
-        for (Map.Entry<Integer, ProxyTableItem> entry : proxyTableItemMap.entrySet()) {
+        for (Map.Entry<Integer, ProxyTable> entry : proxyTableMap.entrySet()) {
             Integer port = entry.getKey();
-            ProxyTableItem tableItem = entry.getValue();
-            String appId = tableItem.getAppId();
-            String serviceAddr = tableItem.getServiceAddr();
+            ProxyTable proxyTable = entry.getValue();
+            String appId = proxyTable.getAppId();
+            String serviceAddr = proxyTable.getServiceAddr();
+            Long sysUserId = proxyTable.getSysUserId();
 
             // 检查是否已监听端口
-            if (ServerChannelManager.getPort2BridgeChannelMapping(port) != null) {
+            if (futureMap.containsKey(port)) {
                 continue;
             }
             // 取当前用户已有命令channel(bridgeChannel), 添加新端口和命令channel的映射
@@ -142,9 +145,10 @@ public class ProxyServer implements Observer {
                             ch.pipeline().addLast(new ForwardHandler());
                         }
                     });
-            try {
-                TrafficMeasureMonitor.createStatMeasure(appId, port);
+            // 创建流量统计对象
+            TrafficMeasureMonitor.createStatMeasure(proxyTable);
 
+            try {
                 ChannelFuture future = bootstrap.bind(port).sync();
                 futureMap.put(port, future);
 

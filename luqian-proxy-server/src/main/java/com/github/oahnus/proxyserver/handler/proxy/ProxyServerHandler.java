@@ -1,11 +1,11 @@
 package com.github.oahnus.proxyserver.handler.proxy;
 
+import com.github.oahnus.luqiancommon.util.AESUtils;
 import com.github.oahnus.proxyprotocol.Consts;
 import com.github.oahnus.proxyprotocol.MessageType;
 import com.github.oahnus.proxyprotocol.NetMessage;
-import com.github.oahnus.proxyserver.config.ProxyTable;
+import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
-import com.github.oahnus.proxyserver.utils.AESUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
@@ -115,8 +115,7 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
             return;
         }
 
-        // TODO auth check
-        String secret = ProxyTable.getInstance().getAppSecret(appId);
+        String secret = ProxyTableContainer.getInstance().getAppSecret(appId);
         if (secret == null) {
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.ERROR);
@@ -137,16 +136,16 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
 
         Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
         if (bridgeChannel != null) {
-            System.out.println("this token has used");
+            System.out.println("This AppId Has Been Used By Other Client");
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.ERROR);
-            netMessage.setData("this appId has been connected".getBytes());
+            netMessage.setData("This AppId Has Been Used By Other Client".getBytes());
             ctx.channel().writeAndFlush(netMessage);
             ctx.channel().close();
             return;
         }
 
-        List<Integer> serverOutPorts = ProxyTable.getInstance().getServerOutPorts();
+        List<Integer> serverOutPorts = ProxyTableContainer.getInstance().getServerOutPorts();
         for (Integer port : serverOutPorts) {
             ServerChannelManager.addPort2BridgeChannelMapping(port, ctx.channel());
         }
@@ -154,6 +153,8 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         ctx.channel().attr(Consts.APP_ID).set(appId);
         ctx.channel().attr(Consts.OUTSIDE_CHANNELS).set(new ConcurrentHashMap<>());
         ServerChannelManager.addBridgeChannel(appId, ctx.channel());
+
+        // TODO 在此处添加Monitor ???
     }
 
     private void handleConnectMessage(ChannelHandlerContext ctx, NetMessage msg) {
@@ -244,7 +245,7 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         System.out.println("err");
         if (cause instanceof IOException) {
-            System.out.println("断开连接");
+            System.out.println("Connection Break");
         } else {
             super.exceptionCaught(ctx, cause);
         }

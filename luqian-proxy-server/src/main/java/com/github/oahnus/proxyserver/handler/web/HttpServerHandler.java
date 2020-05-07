@@ -19,7 +19,6 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
     private static final URL BASE_URL = HttpServerHandler.class.getResource("");
     private static final String WEB_ROOT = "WEB-INF";
 
-
     @Override
     protected void channelRead0(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
         HttpMethod method = request.method();
@@ -30,7 +29,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
         File resource = getResource(page);
 
         // 404
-        boolean keepAlive = HttpUtil.isKeepAlive(request);;
+        boolean keepAlive = HttpUtil.isKeepAlive(request);
         if (!resource.exists()) {
             HttpResponse response = new DefaultHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_FOUND);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/xml;charset=utf-8;");

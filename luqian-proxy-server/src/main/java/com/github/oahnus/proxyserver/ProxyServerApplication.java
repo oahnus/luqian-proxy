@@ -1,12 +1,12 @@
 package com.github.oahnus.proxyserver;
 
-import com.github.oahnus.proxyserver.config.ProxyTable;
+import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import tk.mybatis.spring.annotation.MapperScan;
 
 import java.io.IOException;
 
@@ -15,8 +15,9 @@ import java.io.IOException;
  * Created by oahnus on 2020-03-31
  * 14:34.
  */
-@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
+@SpringBootApplication
 @EnableScheduling
+@MapperScan("com.github.oahnus.proxyserver.mapper")
 public class ProxyServerApplication {
     private int syncVersion;
 
@@ -26,14 +27,15 @@ public class ProxyServerApplication {
 
     @Scheduled(initialDelay = 10000, fixedDelay = 10000)
     public void printMonitor() {
-        TrafficMeasureMonitor.printStatInfo();
+        String info = TrafficMeasureMonitor.printStatInfo();
+        System.out.println(info);
     }
 
     @Scheduled(initialDelay = 10000, fixedDelay = 60000)
     public void syncConfig() throws IOException {
-        int version = ProxyTable.getVersion();
+        int version = ProxyTableContainer.getVersion();
         if (version != syncVersion) {
-            ProxyTable.saveToDisk();
+            ProxyTableContainer.saveToDisk();
             syncVersion = version;
         }
     }

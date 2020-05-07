@@ -1,8 +1,9 @@
 package com.github.oahnus.proxyserver.manager;
 
+import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
 
-import java.util.Date;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,14 +15,23 @@ public class TrafficMeasureMonitor {
     // key -> port
     private static Map<Integer, StatMeasure> measureMap = new ConcurrentHashMap<>();
 
+    // todo refact
+    public static Iterator<Map.Entry<Integer, StatMeasure>> getMeasureIterator() {
+        return measureMap.entrySet().iterator();
+    }
+
     public static StatMeasure getStatMeasure(Integer port) {
         return measureMap.get(port);
     }
 
-    public static StatMeasure createStatMeasure(String appId, Integer port) {
+    public static StatMeasure createStatMeasure(ProxyTable proxyTable) {
+        Integer port = proxyTable.getPort();
+        Long sysUserId = proxyTable.getSysUserId();
+        String appId = proxyTable.getAppId();
+
         StatMeasure statMeasure = getStatMeasure(port);
         if (statMeasure == null) {
-            statMeasure = new StatMeasure(appId, port, new Date());
+            statMeasure = new StatMeasure(sysUserId, appId, port);
             measureMap.put(port, statMeasure);
         }
         return statMeasure;
@@ -31,16 +41,18 @@ public class TrafficMeasureMonitor {
         return measureMap.remove(port);
     }
 
-    public static void printStatInfo() {
-        System.out.println("=========Monitor=========");
+    public static String printStatInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=========Monitor=========\n");
         for (Map.Entry<Integer, StatMeasure> entry : measureMap.entrySet()) {
             Integer port = entry.getKey();
             StatMeasure measure = entry.getValue();
 
-            String msg = String.format("APP_ID: %s, Port: %s, ConnectCount: %s, InBytes: %s, OutBytes: %s",
+            String msg = String.format("APP_ID: %s, Port: %s, ConnectCount: %s, InBytes: %s, OutBytes: %s\n",
                     measure.getAppId(), port, measure.getConnectCount(), measure.getInTrafficBytes(), measure.getOutTrafficBytes());
-            System.out.println(msg);
+            sb.append(msg);
         }
-        System.out.println("=========================");
+        sb.append("=========================\n");
+        return sb.toString();
     }
 }

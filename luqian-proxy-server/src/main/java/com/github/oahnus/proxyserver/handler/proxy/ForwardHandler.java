@@ -100,7 +100,6 @@ public class ForwardHandler extends SimpleChannelInboundHandler<ByteBuf> {
         if (proxyChannel != null) {
             proxyChannel.attr(Consts.NEXT_CHANNEL).set(null);
             proxyChannel.attr(Consts.CHANNEL_ID).set(null);
-            proxyChannel.attr(Consts.APP_ID).set(null);
 
             proxyChannel.config().setOption(ChannelOption.AUTO_READ, true);
             // 通知客户端，用户连接已经断开

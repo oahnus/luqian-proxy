@@ -26,12 +26,12 @@ public class StatisticsHandler extends ChannelDuplexHandler {
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
         StatMeasure measure = TrafficMeasureMonitor.getStatMeasure(port);
-        boolean res = measure.addInTrafficBytes(byteLen);
-        if (res) {
-            ctx.fireChannelRead(msg);
-        } else {
-            ctx.channel().close();
-        }
+        long inBytes = measure.addInTrafficBytes(byteLen);
+//        if (res) {
+        ctx.fireChannelRead(msg);
+//        } else {
+//            ctx.channel().close();
+//        }
     }
 
     @Override
@@ -43,7 +43,7 @@ public class StatisticsHandler extends ChannelDuplexHandler {
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
         StatMeasure measure = TrafficMeasureMonitor.getStatMeasure(port);
-        measure.addOutTrafficBytes(byteLen);
+        long outBytes = measure.addOutTrafficBytes(byteLen);
 
         super.write(ctx, msg, promise);
     }

@@ -104,7 +104,7 @@ public class ProxyServer implements Observer {
     }
 
     private void startForwardServer() {
-        Map<Integer, ProxyTable> proxyTableMap = ProxyTableContainer.getInstance().proxyTableItemMap();
+        Map<Integer, ProxyTable> proxyTableMap = ProxyTableContainer.getInstance().proxyTableMap();
 
         // 关闭失效端口
         for (Integer port : futureMap.keySet()) {

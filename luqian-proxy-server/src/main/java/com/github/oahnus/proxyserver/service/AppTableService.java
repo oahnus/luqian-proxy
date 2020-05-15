@@ -28,7 +28,7 @@ public class AppTableService extends BaseService<AppTableMapper, AppTable, Long>
         List<AppTable> appTableList = selectList(new QueryBuilder(AppTable.class)
                 .eq("sysUserId", sysUserId));
 
-        if (appTableList.size() > 1) {
+        if (appTableList.size() >= 1) {
             throw new ServiceException("单个用户最多创建一个应用");
         }
 

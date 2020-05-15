@@ -97,26 +97,27 @@ public class ProxyTableContainer extends Observable {
         return applicationMap.put(appId, appSecret);
     }
 
-    public Map<Integer, ProxyTable> proxyTableItemMap() {
+    public Map<Integer, ProxyTable> proxyTableMap() {
         if (proxyTableMap.isEmpty()) {
             // 如果map为空，尝试从数据库读取proxy配置
             List<ProxyTable> tableList = proxyTableService.loadAllActive();
             if (!CollectionUtils.isEmpty(tableList)) {
-                // 将固定port的配置表先存入map
+                // 将固定port的配置表先存入map, 避免与随机端口冲突
                 tableList.stream()
-                        .filter(tableItem -> tableItem.getPort()!=null)
-                        .forEach(tableItem -> {
-                            proxyTableMap.put(tableItem.getPort(), tableItem);
+                        .filter(pt -> !pt.getIsRandom())
+                        .forEach(pt -> {
+                            proxyTableMap.put(pt.getPort(), pt);
                         });
                 // 为所有随机端口的配置生成端口
-                tableList.forEach(tableItem -> {
-                    if (tableItem.getPort() == null) {
-                        // random port
+                tableList.forEach(pt -> {
+                    if (pt.getIsRandom()) {
+                        // 分配随机端口
                         int port = RandomPortUtils.getOneRandomPort();
                         while (proxyTableMap.containsKey(port)) {
                             port = RandomPortUtils.getOneRandomPort();
                         }
-                        proxyTableMap.put(port, tableItem);
+                        pt.setPort(port);
+                        proxyTableMap.put(port, pt);
                     }
                 });
             }
@@ -165,7 +166,7 @@ public class ProxyTableContainer extends Observable {
         return proxyTable;
     }
 
-    public void removeMapping(String appId, Integer port) {
+    public void removeProxyTable(String appId, Integer port) {
         ProxyTable proxyTable = proxyTableMap.get(port);
         if (proxyTable == null) {
             throw new ServiceException("配置信息未找到");

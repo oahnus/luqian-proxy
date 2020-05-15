@@ -2,7 +2,10 @@ package com.github.oahnus.proxyserver.manager;
 
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
+import com.sun.org.apache.bcel.internal.generic.NEW;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,10 +17,33 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TrafficMeasureMonitor {
     // key -> port
     private static Map<Integer, StatMeasure> measureMap = new ConcurrentHashMap<>();
+    private static Map<Integer, StatMeasure> temp = null;
 
     // todo refact
     public static Iterator<Map.Entry<Integer, StatMeasure>> getMeasureIterator() {
         return measureMap.entrySet().iterator();
+    }
+
+    public static void reset() {
+        // 复制数据，生成新的map, 然后归档
+        Date date = new Date();
+        synchronized (TrafficMeasureMonitor.class) {
+            temp = new HashMap<>();
+            Iterator<Map.Entry<Integer, StatMeasure>> iterator = getMeasureIterator();
+            while (iterator.hasNext()) {
+                Map.Entry<Integer, StatMeasure> next = iterator.next();
+                Integer port = next.getKey();
+                StatMeasure statMeasure = next.getValue();
+
+                temp.put(port, statMeasure);
+                StatMeasure newMeasure = new StatMeasure();
+                newMeasure.setDate(date);
+                newMeasure.setAppId(statMeasure.getAppId());
+                newMeasure.setPort(port);
+//                newMeasure.setRemainTraffic(0);
+                measureMap.put(port, newMeasure);
+            }
+        }
     }
 
     public static StatMeasure getStatMeasure(Integer port) {

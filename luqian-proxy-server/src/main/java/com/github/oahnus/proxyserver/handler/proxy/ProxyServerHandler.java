@@ -93,6 +93,7 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
     }
 
     private void handleProxyMessage(ChannelHandlerContext ctx, NetMessage msg) {
+        System.out.println("pppp");
         Channel outChannel = ctx.channel().attr(Consts.NEXT_CHANNEL).get();
         if (outChannel != null) {
             ByteBuf buf = ctx.alloc().buffer(msg.getData().length);
@@ -153,8 +154,6 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         ctx.channel().attr(Consts.APP_ID).set(appId);
         ctx.channel().attr(Consts.OUTSIDE_CHANNELS).set(new ConcurrentHashMap<>());
         ServerChannelManager.addBridgeChannel(appId, ctx.channel());
-
-        // TODO 在此处添加Monitor ???
     }
 
     private void handleConnectMessage(ChannelHandlerContext ctx, NetMessage msg) {

@@ -1,8 +1,13 @@
 package com.github.oahnus.proxyserver.config;
 
+import com.github.oahnus.luqiancommon.biz.QueryBuilder;
 import com.github.oahnus.luqiancommon.util.AESUtils;
+import com.github.oahnus.luqiancommon.util.DateUtils;
 import com.github.oahnus.proxyserver.entity.AppTable;
+import com.github.oahnus.proxyserver.entity.StatMeasure;
+import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import com.github.oahnus.proxyserver.service.AppTableService;
+import com.github.oahnus.proxyserver.service.StatMeasureService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -10,6 +15,8 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -25,6 +32,8 @@ public class ApplicationRunnerListener implements ApplicationRunner {
 
     @Autowired
     AppTableService appTableService;
+    @Autowired
+    StatMeasureService measureService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -36,5 +45,10 @@ public class ApplicationRunnerListener implements ApplicationRunner {
                 ProxyTableContainer.getInstance().addApplication(appTable.getAppId(), appTable.getAppSecret());
             }
         }
+
+        Date today = DateUtils.localDate2date(LocalDate.now());
+        List<StatMeasure> measureList = measureService.selectList(new QueryBuilder(StatMeasure.class)
+                .eq("date", today));
+        TrafficMeasureMonitor.init(measureList);
     }
 }

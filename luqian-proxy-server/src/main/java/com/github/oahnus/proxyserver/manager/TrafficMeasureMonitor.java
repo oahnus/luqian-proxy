@@ -2,11 +2,10 @@ package com.github.oahnus.proxyserver.manager;
 
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
-import com.sun.org.apache.bcel.internal.generic.NEW;
 
-import java.util.Date;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -17,40 +16,27 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TrafficMeasureMonitor {
     // key -> port
     private static Map<Integer, StatMeasure> measureMap = new ConcurrentHashMap<>();
-    private static Map<Integer, StatMeasure> temp = null;
 
-    // todo refact
     public static Iterator<Map.Entry<Integer, StatMeasure>> getMeasureIterator() {
         return measureMap.entrySet().iterator();
     }
 
-    public static void reset() {
-        // 复制数据，生成新的map, 然后归档
-        Date date = new Date();
+    public static void init(List<StatMeasure> statMeasures) {
         synchronized (TrafficMeasureMonitor.class) {
-            temp = new HashMap<>();
-            Iterator<Map.Entry<Integer, StatMeasure>> iterator = getMeasureIterator();
-            while (iterator.hasNext()) {
-                Map.Entry<Integer, StatMeasure> next = iterator.next();
-                Integer port = next.getKey();
-                StatMeasure statMeasure = next.getValue();
-
-                temp.put(port, statMeasure);
-                StatMeasure newMeasure = new StatMeasure();
-                newMeasure.setDate(date);
-                newMeasure.setAppId(statMeasure.getAppId());
-                newMeasure.setPort(port);
-//                newMeasure.setRemainTraffic(0);
-                measureMap.put(port, newMeasure);
+            for (StatMeasure statMeasure : statMeasures) {
+                Integer port = statMeasure.getPort();
+                measureMap.put(port, statMeasure);
             }
         }
     }
 
     public static StatMeasure getStatMeasure(Integer port) {
-        return measureMap.get(port);
+        synchronized (port.toString().intern()) {
+            return measureMap.get(port);
+        }
     }
 
-    public static StatMeasure createStatMeasure(ProxyTable proxyTable) {
+    public static void createStatMeasure(ProxyTable proxyTable) {
         Integer port = proxyTable.getPort();
         Long sysUserId = proxyTable.getSysUserId();
         String appId = proxyTable.getAppId();
@@ -60,7 +46,6 @@ public class TrafficMeasureMonitor {
             statMeasure = new StatMeasure(sysUserId, appId, port);
             measureMap.put(port, statMeasure);
         }
-        return statMeasure;
     }
 
     public static StatMeasure removeMeasure(Integer port) {
@@ -80,5 +65,15 @@ public class TrafficMeasureMonitor {
         }
         sb.append("=========================\n");
         return sb.toString();
+    }
+
+    public static List<StatMeasure> reset() {
+        List<StatMeasure> oldMeasureList = new ArrayList<>();
+        for (StatMeasure measure : measureMap.values()){
+            StatMeasure newVal = new StatMeasure(measure.getUserId(), measure.getAppId(), measure.getPort());
+            measureMap.replace(measure.getPort(), newVal);
+            oldMeasureList.add(measure);
+        }
+        return oldMeasureList;
     }
 }

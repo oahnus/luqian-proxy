@@ -2,7 +2,6 @@ package com.github.oahnus.proxyserver.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
-import org.apache.zookeeper.data.Stat;
 
 import javax.persistence.Transient;
 import java.util.ArrayList;

@@ -25,10 +25,10 @@ import java.util.*;
 @Slf4j
 public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasure, Long> {
 
-    private static long ONE_DAY = 60 * 60 * 24 * 1000;
-    private static long ONE_GB = 1024 * 1024 * 1024;
-    private static long ONE_MB = 1024 * 1024;
-    private static long ONE_KB = 1024;
+    private static final long ONE_DAY = 60 * 60 * 24 * 1000;
+    private static final long ONE_GB = 1024 * 1024 * 1024;
+    private static final long ONE_MB = 1024 * 1024;
+    private static final long ONE_KB = 1024;
 
     public List<StatMeasure> queryList(StatMeasure params) {
         QueryBuilder qb = new QueryBuilder(StatMeasure.class);
@@ -36,18 +36,18 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
         if (date != null) {
             qb.eq("date", date);
         }
-        List<StatMeasure> measureList = selectList(qb);
 
-        return measureList;
+        return selectList(qb);
     }
 
 
     public Statistics genStatReport(Long sysUserId) {
-        Date now = DateUtils.localDate2date(LocalDate.now());
-        Date before7Days = DateUtils.localDate2date(LocalDate.now().minusDays(7));
+        int statPeriod = 7;
+        LocalDate beforeNDay = LocalDate.now().minusDays(statPeriod);
+        Date beforeNDate = DateUtils.localDate2date(beforeNDay);
         List<StatMeasure> measureList = selectList(new QueryBuilder(StatMeasure.class)
                 .eq("userId", sysUserId)
-                .greaterEqThan("date", before7Days));
+                .greaterEqThan("date", beforeNDate));
 
         Statistics statistics = new Statistics();
 
@@ -57,30 +57,84 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
         List<Statistics.StatItem> statItemList = new ArrayList<>();
 
         long total = 0;
-        for (Map.Entry<Date, List<StatMeasure>> entry : map.entrySet()) {
-            Date key = entry.getKey();
-            List<StatMeasure> measures = entry.getValue();
-            long totalIn = 0, totalOut = 0;
+        for (int i = 0; i < statPeriod; i++) {
+            LocalDate date = beforeNDay.plusDays(i);
+            Date key = DateUtils.localDate2date(date);
+
             Statistics.StatItem item = new Statistics.StatItem();
             item.setDate(key);
+            if (map.containsKey(key)) {
+                long totalIn = 0, totalOut = 0;
+                List<StatMeasure> measures = map.get(key);
+                for (StatMeasure measure : measures) {
+                    Long inBytes = measure.getInTrafficBytes();
+                    Long outBytes = measure.getOutTrafficBytes();
+                    totalIn += inBytes;
+                    totalOut += outBytes;
 
-            for (StatMeasure measure : measures) {
-                Long inBytes = measure.getInTrafficBytes();
-                Long outBytes = measure.getOutTrafficBytes();
-                totalIn += inBytes;
-                totalOut += outBytes;
-
-                total = total + inBytes + outBytes;
+                    total = total + inBytes + outBytes;
+                }
+                item.setInBytes(totalIn);
+                item.setOutBytes(totalOut);
+            } else {
+                item.setInBytes(0);
+                item.setOutBytes(0);
             }
-            item.setInBytes(totalIn);
-            item.setOutBytes(totalOut);
             statItemList.add(item);
         }
+        // 计算平均流量
+        long avgBytes = total / 7;
 
+        Statistics.StatUnit unit;
+        long unitVal;
+        if (avgBytes < ONE_KB) {
+            unit = Statistics.StatUnit.B;
+            unitVal = 1;
+        } else if (avgBytes < ONE_MB) {
+            unit = Statistics.StatUnit.KB;
+            unitVal = ONE_KB;
+        } else if (avgBytes < ONE_GB) {
+            unit = Statistics.StatUnit.MB;
+            unitVal = ONE_MB;
+        } else {
+            unit = Statistics.StatUnit.GB;
+            unitVal = ONE_GB;
+        }
         statItemList.sort(Comparator.comparingLong(a -> a.getDate().getTime()));
-        statistics.setDateStats(statItemList);
+        // 重新计算数据
+        for (Statistics.StatItem statItem : statItemList) {
+            long inBytes = statItem.getInBytes();
+            long outBytes = statItem.getOutBytes();
+            statItem.setInBytes(inBytes / unitVal);
+            statItem.setOutBytes(outBytes / unitVal);
+        }
+        statistics.setStatUnit(unit);
 
+        statistics.setDateStats(statItemList);
         return statistics;
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    public void dailyReset() {
+        // 重置数据
+        List<StatMeasure> yesterdayMeasureList = TrafficMeasureMonitor.reset();
+        // 更新进数据库
+        List<StatMeasure> needInsertList = new ArrayList<>();
+        List<StatMeasure> needUpdateList = new ArrayList<>();
+
+        for (StatMeasure measure : yesterdayMeasureList) {
+            if (measure.getId() == null) {
+                needInsertList.add(measure);
+            } else {
+                needUpdateList.add(measure);
+            }
+        }
+        if (!CollectionUtils.isEmpty(needInsertList)) {
+            saveBatch(needInsertList);
+        }
+        if (!CollectionUtils.isEmpty(needInsertList)) {
+            updateBatchById(needUpdateList);
+        }
     }
 
     // todo 替换掉Spring Schedule
@@ -90,10 +144,8 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
         Iterator<Map.Entry<Integer, StatMeasure>> iterator = TrafficMeasureMonitor.getMeasureIterator();
         List<StatMeasure> insertList = new ArrayList<>();
         List<StatMeasure> updateList = new ArrayList<>();
-        Date today = DateUtils.localDate2date(LocalDate.now());
         while (iterator.hasNext()) {
             Map.Entry<Integer, StatMeasure> entry = iterator.next();
-            Integer key = entry.getKey();
             StatMeasure measure = entry.getValue();
 
             // 检查统计对象是否有数据更新
@@ -101,18 +153,10 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
             if (syncStatus == SyncStatus.NO_CHANGE.ordinal()) {
                 continue;
             }
-            // 检查是否已存在记录
-            StatMeasure statMeasure = selectOne(new QueryBuilder(StatMeasure.class)
-                    .eq("date", today)
-                    .eq("port", measure.getPort())
-                    .eq("appId", measure.getAppId()));
-
-            if (statMeasure == null) {
+            if (measure.getId() == null) {
                 insertList.add(measure);
             } else {
-                statMeasure.setInTrafficBytes(measure.getInTrafficBytes());
-                statMeasure.setOutTrafficBytes(measure.getOutTrafficBytes());
-                updateList.add(statMeasure);
+                updateList.add(measure);
             }
             // 复位同步状态
             measure.getSyncStatus().compareAndSet(SyncStatus.SYNCING.ordinal(), SyncStatus.NO_CHANGE.ordinal());

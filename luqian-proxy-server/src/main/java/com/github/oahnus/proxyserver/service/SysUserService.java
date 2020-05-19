@@ -8,6 +8,7 @@ import com.github.oahnus.proxyserver.mapper.SysUserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
@@ -20,12 +21,15 @@ import java.util.List;
 public class SysUserService extends BaseService<SysUserMapper, SysUser, Long> {
     @Autowired
     PasswordEncoder passwordEncoder;
+    @Autowired
+    SysAccountService accountService;
 
     public SysUser getUserByUsername(String username) {
         return selectOne(new QueryBuilder(SysUser.class)
                 .eq("username", username));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void createUser(SysUser sysUser) {
         String username = sysUser.getUsername();
         List<SysUser> userList = selectList(new QueryBuilder(SysUser.class)
@@ -39,5 +43,8 @@ public class SysUserService extends BaseService<SysUserMapper, SysUser, Long> {
         sysUser.setPassword(passwordEncoder.encode(password));
 
         save(sysUser);
+
+        // 创建账户
+        accountService.createAccount(sysUser);
     }
 }

@@ -2,7 +2,6 @@ package com.github.oahnus.proxyserver.config.security;
 
 import com.alibaba.fastjson.JSON;
 import com.github.oahnus.luqiancommon.dto.RespData;
-import com.github.oahnus.proxyserver.entity.SysUser;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 

@@ -1,7 +1,6 @@
 package com.github.oahnus.proxyserver.handler.stat;
 
 import com.github.oahnus.proxyprotocol.Consts;
-import com.github.oahnus.proxyserver.entity.StatMeasure;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -25,13 +24,12 @@ public class StatisticsHandler extends ChannelDuplexHandler {
 
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
-        StatMeasure measure = TrafficMeasureMonitor.getStatMeasure(port);
-        long inBytes = measure.addInTrafficBytes(byteLen);
-//        if (res) {
-        ctx.fireChannelRead(msg);
-//        } else {
-//            ctx.channel().close();
-//        }
+        boolean res = TrafficMeasureMonitor.addInTrafficBytes(port, byteLen);
+        if (res) {
+            ctx.fireChannelRead(msg);
+        } else {
+            ctx.channel().close();
+        }
     }
 
     @Override
@@ -42,9 +40,7 @@ public class StatisticsHandler extends ChannelDuplexHandler {
         int byteLen = ((ByteBuf) msg).readableBytes();
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
-        StatMeasure measure = TrafficMeasureMonitor.getStatMeasure(port);
-        long outBytes = measure.addOutTrafficBytes(byteLen);
-
+        TrafficMeasureMonitor.addOutTrafficBytes(port, byteLen);
         super.write(ctx, msg, promise);
     }
 
@@ -54,8 +50,7 @@ public class StatisticsHandler extends ChannelDuplexHandler {
         int port = socketAddress.getPort();
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
-        StatMeasure measure = TrafficMeasureMonitor.getStatMeasure(port);
-        measure.incrConnectCount();
+        TrafficMeasureMonitor.incrConnectCount(port);
 
         super.channelActive(ctx);
     }
@@ -66,8 +61,7 @@ public class StatisticsHandler extends ChannelDuplexHandler {
         int port = socketAddress.getPort();
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
-        StatMeasure measure = TrafficMeasureMonitor.getStatMeasure(port);
-        measure.decrConnectCount();
+        TrafficMeasureMonitor.decrConnectCount(port);
 
         super.channelInactive(ctx);
     }

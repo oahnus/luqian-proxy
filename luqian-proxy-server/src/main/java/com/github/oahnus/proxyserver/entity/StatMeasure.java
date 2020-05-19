@@ -31,7 +31,7 @@ public class StatMeasure {
     private Date date;
 //    private Long trafficLimit = 700 * 1024 * 1024L; 700M
     private Long remainTraffic = 5 * 1024L; // 5K
-
+    @Transient
     private AtomicInteger syncStatus = new AtomicInteger();
 
     public StatMeasure() { }

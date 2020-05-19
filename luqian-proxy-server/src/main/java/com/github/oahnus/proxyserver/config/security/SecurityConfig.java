@@ -1,6 +1,8 @@
 package com.github.oahnus.proxyserver.config.security;
 
+import com.github.oahnus.proxyserver.entity.SysPermission;
 import com.github.oahnus.proxyserver.entity.SysUser;
+import com.github.oahnus.proxyserver.service.SysPermService;
 import com.github.oahnus.proxyserver.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -15,12 +17,16 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.channel.ChannelProcessingFilter;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by oahnus on 2020-04-26
@@ -30,13 +36,15 @@ import org.springframework.security.web.access.channel.ChannelProcessingFilter;
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
-    private SysUserService authService;
+    private SysUserService userService;
+    @Autowired
+    private SysPermService permService;
 
     public UserDetailsService userDetailsService() {
         return new UserDetailsService() {
             @Override
             public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
-                SysUser sysUser = authService.getUserByUsername(s);
+                SysUser sysUser = userService.getUserByUsername(s);
                 if (sysUser == null) {
                     throw new DisabledException("用户名或密码错误");
                 }
@@ -100,8 +108,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     throw new DisabledException("用户名或密码错误");
                 }
 
-                // todo select perm
-                return new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(), userDetails.getAuthorities());
+                SysUserDetails sysUserDetails = (SysUserDetails) userDetails;
+                SysUser sysUser = sysUserDetails.getSysUser();
+                Long userId = sysUser.getId();
+
+                List<SysPermission> permissions = permService.listByUserId(userId);
+                List<SimpleGrantedAuthority> authorities = permissions.stream().map(perm -> {
+                    String value = perm.getValue();
+                    return new SimpleGrantedAuthority(value);
+                }).collect(Collectors.toList());
+
+                sysUserDetails.setAuthorities(authorities);
+
+                return new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(), authorities);
             }
 
             @Override

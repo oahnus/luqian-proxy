@@ -5,9 +5,11 @@ import com.github.oahnus.luqiancommon.util.AESUtils;
 import com.github.oahnus.luqiancommon.util.DateUtils;
 import com.github.oahnus.proxyserver.entity.AppTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
+import com.github.oahnus.proxyserver.entity.SysAccount;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import com.github.oahnus.proxyserver.service.AppTableService;
 import com.github.oahnus.proxyserver.service.StatMeasureService;
+import com.github.oahnus.proxyserver.service.SysAccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -34,6 +36,8 @@ public class ApplicationRunnerListener implements ApplicationRunner {
     AppTableService appTableService;
     @Autowired
     StatMeasureService measureService;
+    @Autowired
+    SysAccountService accountService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -49,6 +53,8 @@ public class ApplicationRunnerListener implements ApplicationRunner {
         Date today = DateUtils.localDate2date(LocalDate.now());
         List<StatMeasure> measureList = measureService.selectList(new QueryBuilder(StatMeasure.class)
                 .eq("date", today));
-        TrafficMeasureMonitor.init(measureList);
+
+        List<SysAccount> accountList = accountService.selectAll();
+        TrafficMeasureMonitor.init(measureList, accountList);
     }
 }

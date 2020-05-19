@@ -28,15 +28,12 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
         checkProxyTable(formData);
         Integer port = formData.getPort();
 
-        ProxyTable proxyTable = new ProxyTable();
-        proxyTable.setId(String.valueOf(snowFlake.generateId()));
-        proxyTable.setCreateTime(new Date());
-        proxyTable.setEnable(true);
-        proxyTable.setPort(port);
+        formData.setId(String.valueOf(snowFlake.generateId()));
+        formData.setCreateTime(new Date());
 
-        save(proxyTable);
+        save(formData);
 
-        ProxyTableContainer.getInstance().addProxyTable(proxyTable);
+        ProxyTableContainer.getInstance().addProxyTable(formData);
 
         // 通知观察者
         ProxyTableContainer.getInstance().notifyObservers();

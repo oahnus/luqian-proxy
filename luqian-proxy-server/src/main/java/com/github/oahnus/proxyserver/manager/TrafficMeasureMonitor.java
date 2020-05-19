@@ -2,6 +2,7 @@ package com.github.oahnus.proxyserver.manager;
 
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
+import com.github.oahnus.proxyserver.entity.SysAccount;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -16,24 +17,29 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TrafficMeasureMonitor {
     // key -> port
     private static Map<Integer, StatMeasure> measureMap = new ConcurrentHashMap<>();
+    // key userId
+    private static Map<Long, SysAccount> accountMap = new ConcurrentHashMap<>();
 
     public static Iterator<Map.Entry<Integer, StatMeasure>> getMeasureIterator() {
         return measureMap.entrySet().iterator();
     }
+    public static Iterator<Map.Entry<Long, SysAccount>> getAccountIterator() {
+        return accountMap.entrySet().iterator();
+    }
 
-    public static void init(List<StatMeasure> statMeasures) {
-        synchronized (TrafficMeasureMonitor.class) {
-            for (StatMeasure statMeasure : statMeasures) {
-                Integer port = statMeasure.getPort();
-                measureMap.put(port, statMeasure);
-            }
+    public static void init(List<StatMeasure> statMeasures, List<SysAccount> accountList) {
+        for (StatMeasure statMeasure : statMeasures) {
+            Integer port = statMeasure.getPort();
+            measureMap.put(port, statMeasure);
+        }
+        for (SysAccount account : accountList) {
+            Long userId = account.getUserId();
+            accountMap.put(userId, account);
         }
     }
 
-    public static StatMeasure getStatMeasure(Integer port) {
-        synchronized (port.toString().intern()) {
-            return measureMap.get(port);
-        }
+    public static SysAccount getAccount(Long userId) {
+        return accountMap.get(userId);
     }
 
     public static void createStatMeasure(ProxyTable proxyTable) {
@@ -41,10 +47,8 @@ public class TrafficMeasureMonitor {
         Long sysUserId = proxyTable.getSysUserId();
         String appId = proxyTable.getAppId();
 
-        StatMeasure statMeasure = getStatMeasure(port);
-        if (statMeasure == null) {
-            statMeasure = new StatMeasure(sysUserId, appId, port);
-            measureMap.put(port, statMeasure);
+        if (!measureMap.containsKey(port)) {
+            measureMap.put(port, new StatMeasure(sysUserId, appId, port));
         }
     }
 
@@ -75,5 +79,39 @@ public class TrafficMeasureMonitor {
             oldMeasureList.add(measure);
         }
         return oldMeasureList;
+    }
+
+    public static boolean addInTrafficBytes(int port, int byteLen) {
+        StatMeasure measure = measureMap.get(port);
+
+        Long userId = measure.getUserId();
+        SysAccount sysAccount = accountMap.get(userId);
+
+        // 检查已用流量是否超过流量限额
+        if (sysAccount.getUsedTraffic() > sysAccount.getTrafficLimit()) {
+            return false;
+        }
+        // 记录
+        measure.addInTrafficBytes(byteLen);
+        sysAccount.addUsedTraffic(byteLen);
+        return true;
+    }
+
+    public static void addOutTrafficBytes(int port, int byteLen) {
+        StatMeasure measure = measureMap.get(port);
+        measure.addOutTrafficBytes(byteLen);
+
+        Long userId = measure.getUserId();
+        SysAccount sysAccount = accountMap.get(userId);
+        sysAccount.addUsedTraffic(byteLen);
+    }
+
+    public static void decrConnectCount(int port) {
+        StatMeasure measure = measureMap.get(port);
+        measure.getConnectCount().decrementAndGet();
+    }
+    public static void incrConnectCount(int port) {
+        StatMeasure measure = measureMap.get(port);
+        measure.getConnectCount().incrementAndGet();
     }
 }

@@ -37,7 +37,7 @@ public class AppTableService extends BaseService<AppTableMapper, AppTable, Long>
         // 生成appId 和 secret
         while (i < maxTry) {
             appId = RandomUtils.genNChars(8, RandomUtils.MODE.ONLY_NUMBER);
-            // TODO L2 refact 检查appId是否重复
+            // 检查appId是否存在
             if (ProxyTableContainer.getInstance().getAppSecret(appId) == null) {
                 secret = AESUtils.encrypt(appId);
                 break;

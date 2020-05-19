@@ -3,9 +3,9 @@ package com.github.oahnus.proxyserver.service;
 import com.github.oahnus.luqiancommon.biz.BaseService;
 import com.github.oahnus.luqiancommon.biz.QueryBuilder;
 import com.github.oahnus.luqiancommon.util.DateUtils;
-import com.github.oahnus.luqiancommon.util.MyCollectionUtils;
 import com.github.oahnus.proxyserver.dto.Statistics;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
+import com.github.oahnus.proxyserver.entity.SysAccount;
 import com.github.oahnus.proxyserver.enums.SyncStatus;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import com.github.oahnus.proxyserver.mapper.StatMeasureMapper;
@@ -14,8 +14,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by oahnus on 2020-04-30
@@ -29,6 +33,8 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
     private static final long ONE_GB = 1024 * 1024 * 1024;
     private static final long ONE_MB = 1024 * 1024;
     private static final long ONE_KB = 1024;
+
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public List<StatMeasure> queryList(StatMeasure params) {
         QueryBuilder qb = new QueryBuilder(StatMeasure.class);
@@ -51,18 +57,20 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
 
         Statistics statistics = new Statistics();
 
-        Map<Date, List<StatMeasure>> map = MyCollectionUtils
-                .groupList2Map(measureList, "date", Date.class);
+        Map<String, List<StatMeasure>> map = measureList.stream()
+                .collect(Collectors.groupingBy(
+                        m -> DateUtils.date2String(m.getDate(), DateUtils.PATTERN_YMD2),
+                        Collectors.toList()));
 
         List<Statistics.StatItem> statItemList = new ArrayList<>();
 
         long total = 0;
         for (int i = 0; i < statPeriod; i++) {
             LocalDate date = beforeNDay.plusDays(i);
-            Date key = DateUtils.localDate2date(date);
+            String key = date.format(formatter);
 
             Statistics.StatItem item = new Statistics.StatItem();
-            item.setDate(key);
+            item.setDate(DateUtils.string2Date(key, DateUtils.PATTERN_YMD2));
             if (map.containsKey(key)) {
                 long totalIn = 0, totalOut = 0;
                 List<StatMeasure> measures = map.get(key);
@@ -74,11 +82,11 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
 
                     total = total + inBytes + outBytes;
                 }
-                item.setInBytes(totalIn);
-                item.setOutBytes(totalOut);
+                item.setInBytes(BigDecimal.valueOf(totalIn));
+                item.setOutBytes(BigDecimal.valueOf(totalOut));
             } else {
-                item.setInBytes(0);
-                item.setOutBytes(0);
+                item.setInBytes(BigDecimal.ZERO);
+                item.setOutBytes(BigDecimal.ZERO);
             }
             statItemList.add(item);
         }
@@ -103,13 +111,35 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
         statItemList.sort(Comparator.comparingLong(a -> a.getDate().getTime()));
         // 重新计算数据
         for (Statistics.StatItem statItem : statItemList) {
-            long inBytes = statItem.getInBytes();
-            long outBytes = statItem.getOutBytes();
-            statItem.setInBytes(inBytes / unitVal);
-            statItem.setOutBytes(outBytes / unitVal);
-        }
-        statistics.setStatUnit(unit);
+            BigDecimal inBytes = statItem.getInBytes();
+            BigDecimal outBytes = statItem.getOutBytes();
 
+            statItem.setInBytes(inBytes.divide(BigDecimal.valueOf(unitVal), 2, RoundingMode.HALF_UP));
+            statItem.setOutBytes(outBytes.divide(BigDecimal.valueOf(unitVal), 2, RoundingMode.HALF_UP));
+        }
+
+        long todayInBytes = 0, todayOutBytes = 0;
+        int totalConCount = 0;
+        Iterator<Map.Entry<Integer, StatMeasure>> iterator = TrafficMeasureMonitor.getMeasureIterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, StatMeasure> entry = iterator.next();
+            StatMeasure stat = entry.getValue();
+            if (stat.getUserId().equals(sysUserId)) {
+                todayInBytes += stat.getInTrafficBytes();
+                todayOutBytes += stat.getOutTrafficBytes();
+                totalConCount += stat.getConnectCount().get();
+            }
+        }
+
+        statistics.setTodayInBytes(todayInBytes);
+        statistics.setTodayOutBytes(todayOutBytes);
+        statistics.setTotalConCount(totalConCount);
+
+        SysAccount account = TrafficMeasureMonitor.getAccount(sysUserId);
+        statistics.setTrafficLimit(account.getTrafficLimit());
+        statistics.setUsedTraffic(account.getUsedTraffic());
+
+        statistics.setStatUnit(unit);
         statistics.setDateStats(statItemList);
         return statistics;
     }

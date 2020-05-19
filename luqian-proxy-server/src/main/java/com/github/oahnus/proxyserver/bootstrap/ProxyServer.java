@@ -115,6 +115,7 @@ public class ProxyServer implements Observer {
                 // 移除端口和命令Channel的映射
                 TrafficMeasureMonitor.removeMeasure(port);
                 ServerChannelManager.removePort2BridgeChannelMapping(port);
+                proxyTableMap.remove(port);
             }
         }
 

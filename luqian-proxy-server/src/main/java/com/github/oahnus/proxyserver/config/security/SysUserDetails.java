@@ -3,12 +3,9 @@ package com.github.oahnus.proxyserver.config.security;
 import com.github.oahnus.proxyserver.entity.SysUser;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 /**
  * Created by oahnus on 2020-04-26
@@ -17,6 +14,7 @@ import java.util.List;
 @Data
 public class SysUserDetails implements UserDetails {
     private SysUser sysUser;
+    private Collection<? extends GrantedAuthority> authorities;
 
     public SysUserDetails(SysUser sysUser) {
         this.sysUser = sysUser;
@@ -24,9 +22,7 @@ public class SysUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        List<GrantedAuthority> permList = new ArrayList<>();
-        permList.add(new SimpleGrantedAuthority("TEST"));
-        return permList;
+        return authorities;
     }
 
     @Override

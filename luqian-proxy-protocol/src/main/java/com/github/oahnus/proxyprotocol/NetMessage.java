@@ -1,7 +1,6 @@
 package com.github.oahnus.proxyprotocol;
 
 import lombok.Data;
-import org.msgpack.annotation.Message;
 
 import java.util.UUID;
 
@@ -10,7 +9,6 @@ import java.util.UUID;
  * 15:42.
  */
 @Data
-@Message
 public class NetMessage {
     private String id;
     private String uri;

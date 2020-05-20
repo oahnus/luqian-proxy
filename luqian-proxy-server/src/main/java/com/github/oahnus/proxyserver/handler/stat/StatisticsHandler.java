@@ -1,8 +1,12 @@
 package com.github.oahnus.proxyserver.handler.stat;
 
 import com.github.oahnus.proxyprotocol.Consts;
+import com.github.oahnus.proxyprotocol.MessageType;
+import com.github.oahnus.proxyprotocol.NetMessage;
+import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -28,6 +32,11 @@ public class StatisticsHandler extends ChannelDuplexHandler {
         if (res) {
             ctx.fireChannelRead(msg);
         } else {
+            Channel bridgeChannel = ServerChannelManager.getPort2BridgeChannelMapping(port);
+            NetMessage netMessage = new NetMessage();
+            netMessage.setType(MessageType.INFO);
+            netMessage.setData("Traffic Amount Overflow".getBytes());
+            bridgeChannel.writeAndFlush(netMessage);
             ctx.channel().close();
         }
     }

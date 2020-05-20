@@ -10,4 +10,9 @@ public class ClientConfig {
 
     public static String appId;
     public static String appSecret;
+
+    public static final String defaultHost = "127.0.0.1";
+    public static final String defaultPort = "7766";
+    public static final String defaultAppId = "20134633";
+    public static final String defaultAppSecret = "hELnR/+K2Jt5SZ65Fu8zaQ==";
 }

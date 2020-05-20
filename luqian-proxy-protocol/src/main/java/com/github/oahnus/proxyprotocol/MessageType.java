@@ -11,4 +11,5 @@ public class MessageType {
     public static final byte PROXY = 0x04;
     public static final byte DISCONNECT = 0x05;
     public static final byte ERROR = 0x06;
+    public static final byte INFO = 0x07;
 }

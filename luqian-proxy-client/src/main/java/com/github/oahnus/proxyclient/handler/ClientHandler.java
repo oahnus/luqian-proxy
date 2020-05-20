@@ -10,6 +10,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 
@@ -17,6 +18,7 @@ import java.io.IOException;
  * Created by oahnus on 2020-04-01
  * 16:49.
  */
+@Slf4j
 public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
     private Bootstrap bootstrap;
     private Bootstrap serverBootstrap;
@@ -44,7 +46,15 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
             case MessageType.ERROR:
                 handleError(ctx, msg);
                 break;
+            case MessageType.INFO:
+                handleInfoMsg(ctx, msg);
+                break;
         }
+    }
+
+    private void handleInfoMsg(ChannelHandlerContext ctx, NetMessage msg) {
+        String info = new String(msg.getData());
+        log.info(info);
     }
 
     private void handleError(ChannelHandlerContext ctx, NetMessage msg) {
@@ -84,16 +94,14 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
         int port = Integer.parseInt(hostPort.split(":")[1]);
 
         Channel bridgeChannel = ctx.channel();
-//        System.out.println("Client ChannelId=" + channelId);
         ClientChannelManager.setCurBridgeChannel(bridgeChannel);
-//        System.out.println("bridge ChannelId=" + bridgeChannel.attr(Consts.CHANNEL_ID).get());
 
         // 连接本地服务 host, port
         serverBootstrap.connect(host, port).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    System.out.println("Connect Service Success");
+                    log.debug("Connect Service [{}] Success", hostPort);
                     Channel serviceChannel = future.channel();
                     serviceChannel.config().setOption(ChannelOption.AUTO_READ, false);
 
@@ -129,7 +137,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
                 } else {
                     // disconnect
                     NetMessage msg = new NetMessage();
-                    msg.setType(MessageType.CONNECT);
+                    msg.setType(MessageType.DISCONNECT);
                     msg.setUri(appId + "#" + channelId);
                     bridgeChannel.writeAndFlush(msg);
                 }

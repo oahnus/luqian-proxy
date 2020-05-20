@@ -9,15 +9,18 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Created by oahnus on 2020-04-03
  * 7:25.
  * 与
  */
+@Slf4j
 public class ServiceHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        log.debug("Read Data");
         Channel serviceChannel = ctx.channel();
         Channel proxyChannel = serviceChannel.attr(Consts.NEXT_CHANNEL).get();
 
@@ -49,7 +52,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<ByteBuf> {
         Channel serviceChannel = ctx.channel();
         String appId = serviceChannel.attr(Consts.APP_ID).get();
         String channelId = serviceChannel.attr(Consts.CHANNEL_ID).get();
-//        System.out.println("channelId = " + channelId);
+        log.debug("Channel Inactive, ChannelId = {}", channelId);
         if (channelId != null) {
             ClientChannelManager.removeServiceChannel(channelId);
         }

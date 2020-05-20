@@ -2,7 +2,6 @@ package com.github.oahnus.proxyprotocol;
 
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
-import javafx.util.converter.LongStringConverter;
 
 import java.util.List;
 import java.util.Map;

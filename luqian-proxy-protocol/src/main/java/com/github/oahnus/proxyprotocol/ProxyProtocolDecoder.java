@@ -3,11 +3,8 @@ package com.github.oahnus.proxyprotocol;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.MessageToMessageDecoder;
-import org.msgpack.MessagePack;
 
 import java.nio.ByteOrder;
-import java.util.List;
 
 /**
  * Created by oahnus on 2020-03-31

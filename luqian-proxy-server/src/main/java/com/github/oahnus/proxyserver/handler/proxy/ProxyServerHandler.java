@@ -93,7 +93,6 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
     }
 
     private void handleProxyMessage(ChannelHandlerContext ctx, NetMessage msg) {
-        System.out.println("pppp");
         Channel outChannel = ctx.channel().attr(Consts.NEXT_CHANNEL).get();
         if (outChannel != null) {
             ByteBuf buf = ctx.alloc().buffer(msg.getData().length);
@@ -120,7 +119,7 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         if (secret == null) {
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.ERROR);
-            netMessage.setData("Appid Is Not Existed".getBytes());
+            netMessage.setData("AppId Is Not Existed".getBytes());
             ctx.channel().writeAndFlush(netMessage);
             ctx.channel().close();
             return;
@@ -129,7 +128,7 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         if (!decrypt.equals(appId)) {
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.ERROR);
-            netMessage.setData("AppSecret Is Invalid".getBytes());
+            netMessage.setData("Authenticate Success. AppSecret Is Invalid".getBytes());
             ctx.channel().writeAndFlush(netMessage);
             ctx.channel().close();
             return;
@@ -137,10 +136,9 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
 
         Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
         if (bridgeChannel != null) {
-            System.out.println("This AppId Has Been Used By Other Client");
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.ERROR);
-            netMessage.setData("This AppId Has Been Used By Other Client".getBytes());
+            netMessage.setData("Authenticate Failed. This AppId Has Been Used By Other Client".getBytes());
             ctx.channel().writeAndFlush(netMessage);
             ctx.channel().close();
             return;
@@ -154,6 +152,12 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         ctx.channel().attr(Consts.APP_ID).set(appId);
         ctx.channel().attr(Consts.OUTSIDE_CHANNELS).set(new ConcurrentHashMap<>());
         ServerChannelManager.addBridgeChannel(appId, ctx.channel());
+
+        // send success info
+        NetMessage netMessage = new NetMessage();
+        netMessage.setType(MessageType.INFO);
+        netMessage.setData("Authenticate Success".getBytes());
+        ctx.channel().writeAndFlush(netMessage);
     }
 
     private void handleConnectMessage(ChannelHandlerContext ctx, NetMessage msg) {

@@ -20,14 +20,14 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
 
-        <netty.version>4.1.36.Final</netty.version>
+        <netty.version>4.1.42.Final</netty.version>
         <lombok.version>1.18.10</lombok.version>
         <springboot.version>2.1.6.RELEASE</springboot.version>
         <msgback.version>0.6.12</msgback.version>
         <fastjson.version>1.2.56</fastjson.version>
 
         <slf4j.version>2.0.0-alpha1</slf4j.version>
-        <logback.version>1.3.0-alpha5</logback.version>
+        <logback.version>1.2.3</logback.version>
         <mysql.version>5.1.47</mysql.version>
     </properties>
 
@@ -72,6 +72,7 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

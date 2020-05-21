@@ -1,3 +1,7 @@
 Manifest-Version: 1.0
+Class-Path: libs/checker-framework-1.7.0.jar libs/logback-core-1.2.3.j
+ ar libs/javax.mail-1.6.2.jar libs/activation-1.1.jar libs/netty-all-4
+ .1.42.Final.jar libs/logback-classic-1.2.3.jar libs/slf4j-api-1.7.26.
+ jar logback.xml
 Main-Class: com.github.oahnus.proxyclient.ClientCmd
 

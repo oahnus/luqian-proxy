@@ -20,12 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 public class ServiceHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
-        log.debug("Read Data");
+        log.info("Forward {} Bytes Data From Channel", buf.readableBytes());
         Channel serviceChannel = ctx.channel();
         Channel proxyChannel = serviceChannel.attr(Consts.NEXT_CHANNEL).get();
 
         byte[] bytes = new byte[buf.readableBytes()];
         buf.readBytes(bytes);
+        if (log.isDebugEnabled()) {
+            log.debug("Data: {}", new String(bytes));
+        }
 
         String channelId = serviceChannel.attr(Consts.CHANNEL_ID).get();
         String appId = serviceChannel.attr(Consts.APP_ID).get();

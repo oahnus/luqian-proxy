@@ -101,7 +101,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    log.debug("Connect Service [{}] Success", hostPort);
+                    log.info("Connect Service [{}] Success", hostPort);
                     Channel serviceChannel = future.channel();
                     serviceChannel.config().setOption(ChannelOption.AUTO_READ, false);
 

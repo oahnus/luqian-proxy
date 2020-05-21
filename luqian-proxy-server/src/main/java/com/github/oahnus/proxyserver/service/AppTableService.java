@@ -2,8 +2,8 @@ package com.github.oahnus.proxyserver.service;
 
 import com.github.oahnus.luqiancommon.biz.BaseService;
 import com.github.oahnus.luqiancommon.biz.QueryBuilder;
-import com.github.oahnus.luqiancommon.util.AESUtils;
 import com.github.oahnus.luqiancommon.util.RandomUtils;
+import com.github.oahnus.luqiancommon.util.encrypt.AESUtils;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.entity.AppTable;
 import com.github.oahnus.proxyserver.exceptions.ServiceException;

@@ -1,6 +1,6 @@
 package com.github.oahnus.proxyserver.handler.proxy;
 
-import com.github.oahnus.luqiancommon.util.AESUtils;
+import com.github.oahnus.luqiancommon.util.encrypt.AESUtils;
 import com.github.oahnus.proxyprotocol.Consts;
 import com.github.oahnus.proxyprotocol.MessageType;
 import com.github.oahnus.proxyprotocol.NetMessage;

@@ -126,9 +126,10 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         }
         String decrypt = AESUtils.decrypt(appSecret);
         if (!decrypt.equals(appId)) {
+            // 如果appSecret与appId无法匹配
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.ERROR);
-            netMessage.setData("Authenticate Success. AppSecret Is Invalid".getBytes());
+            netMessage.setData("Authenticate Failed. AppSecret Is Invalid".getBytes());
             ctx.channel().writeAndFlush(netMessage);
             ctx.channel().close();
             return;
@@ -136,15 +137,15 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
 
         Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
         if (bridgeChannel != null) {
+            // 如果appId已经登录在server端, 向就旧的client发送断线消息
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.ERROR);
-            netMessage.setData("Authenticate Failed. This AppId Has Been Used By Other Client".getBytes());
-            ctx.channel().writeAndFlush(netMessage);
-            ctx.channel().close();
-            return;
+            netMessage.setData("AppId Conflicted. This AppId Has Been Authenticated By Other Client".getBytes());
+            bridgeChannel.writeAndFlush(netMessage);
+            bridgeChannel.close();
         }
 
-        List<Integer> serverOutPorts = ProxyTableContainer.getInstance().getServerOutPorts();
+        List<Integer> serverOutPorts = ProxyTableContainer.getInstance().getServerOutPorts(appId);
         for (Integer port : serverOutPorts) {
             ServerChannelManager.addPort2BridgeChannelMapping(port, ctx.channel());
         }
@@ -192,6 +193,7 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         Channel outChannel = ctx.channel().attr(Consts.NEXT_CHANNEL).get();
 
         if (outChannel != null && outChannel.isActive()) {
+            // 转发端断开连接
             String appId = ctx.channel().attr(Consts.APP_ID).get();
             String channelId = ctx.channel().attr(Consts.CHANNEL_ID).get();
             Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
@@ -205,11 +207,13 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
             outChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
             outChannel.close();
         } else {
+            // 客户端断开连接
             if (ctx.channel().attr(Consts.OUTSIDE_PORTS).get() == null) {
                 return;
             }
 
             String appId = ctx.channel().attr(Consts.APP_ID).get();
+
             Channel channel = ServerChannelManager.removeBridgeChannel(appId);
             if (ctx.channel() != channel) {
                 ServerChannelManager.addBridgeChannel(appId, ctx.channel());

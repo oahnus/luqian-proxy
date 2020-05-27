@@ -178,7 +178,9 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
         } else if(cause instanceof RuntimeException) {
             System.err.println(cause.getMessage());
             ctx.channel().close();
-//            System.exit(0);
+            if (cause.getMessage().startsWith("AppId Conflicted")) {
+                System.exit(0);
+            }
         } else {
             super.exceptionCaught(ctx, cause);
         }

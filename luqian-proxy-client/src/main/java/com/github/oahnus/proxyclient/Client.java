@@ -62,7 +62,6 @@ public class Client implements OfflineListener {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    reconnectInterval = 2000;
                     log.info("Connect To Server Success, Send Auth Request");
                     NetMessage netMessage = new NetMessage();
                     ClientChannelManager.setCurBridgeChannel(future.channel());

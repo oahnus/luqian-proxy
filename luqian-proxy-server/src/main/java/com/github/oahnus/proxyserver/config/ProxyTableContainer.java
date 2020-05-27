@@ -14,12 +14,12 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
 import java.io.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Created by oahnus on 2020-04-03
@@ -125,8 +125,13 @@ public class ProxyTableContainer extends Observable {
         return proxyTableMap;
     }
 
-    public List<Integer> getServerOutPorts() {
-        return new ArrayList<>(proxyTableMap.keySet());
+    public List<Integer> getServerOutPorts(String appId) {
+        return proxyTableMap.values()
+                .stream()
+                .filter(pt -> pt.getAppId().equals(appId))
+                .map(ProxyTable::getPort)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     public synchronized void addProxyTable(ProxyTable proxyTable) {

@@ -66,7 +66,7 @@ public class ForwardHandler extends SimpleChannelInboundHandler<ByteBuf> {
         bridgeChannel.attr(Consts.CHANNEL_ID).set(channelId);
         bridgeChannel.attr(Consts.OUTSIDE_CHANNELS).get().put(channelId, outChannel);
 
-        String appId = bridgeChannel.attr(Consts.APP_ID).get();
+        String appId = tableItem.getAppId();
 
         // 发送连接通知到client
         NetMessage message = new NetMessage();

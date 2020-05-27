@@ -1,8 +1,8 @@
 package com.github.oahnus.proxyserver.config;
 
 import com.github.oahnus.luqiancommon.biz.QueryBuilder;
-import com.github.oahnus.luqiancommon.util.AESUtils;
 import com.github.oahnus.luqiancommon.util.DateUtils;
+import com.github.oahnus.luqiancommon.util.encrypt.AESUtils;
 import com.github.oahnus.proxyserver.entity.AppTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
 import com.github.oahnus.proxyserver.entity.SysAccount;

@@ -4,10 +4,7 @@ import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
 import com.github.oahnus.proxyserver.entity.SysAccount;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -113,5 +110,13 @@ public class TrafficMeasureMonitor {
     public static void incrConnectCount(int port) {
         StatMeasure measure = measureMap.get(port);
         measure.getConnectCount().incrementAndGet();
+    }
+
+    public static void clearInactivePorts(Collection<Integer> activePorts) {
+        measureMap.keySet().forEach(port -> {
+            if (!activePorts.contains(port)) {
+                removeMeasure(port);
+            }
+        });
     }
 }

@@ -148,11 +148,13 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (ClientChannelManager.getCurBridgeChannel() == ctx.channel()) {
+            // 命令通道断开连接
             ClientChannelManager.clearCurBridgeChannel();
             ClientChannelManager.clearProxyChannelPool();
 
             offlineListener.handleOffline();
         } else {
+            // 服务通道断开连接
             Channel serviceChannel = ctx.channel().attr(Consts.NEXT_CHANNEL).get();
             if (serviceChannel != null && serviceChannel.isActive()) {
                 serviceChannel.close();
@@ -174,9 +176,10 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof IOException) {
-            System.err.println("Connection Break");
+            log.error("Connection Break.连接断开");
         } else if(cause instanceof RuntimeException) {
             System.err.println(cause.getMessage());
+            log.error(cause.getMessage());
             ctx.channel().close();
             if (cause.getMessage().startsWith("AppId Conflicted")) {
                 System.exit(0);

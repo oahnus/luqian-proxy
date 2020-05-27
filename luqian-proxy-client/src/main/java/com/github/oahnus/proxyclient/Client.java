@@ -24,6 +24,7 @@ public class Client implements OfflineListener {
     private Bootstrap serverBootstrap;
 
     private static int reconnectInterval = 2000;
+    private static int retryCount = 0;
 
     public Client() {
         workerGroup = new NioEventLoopGroup();
@@ -63,15 +64,23 @@ public class Client implements OfflineListener {
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
                     log.info("Connect To Server Success, Send Auth Request");
+
+                    // 重置重连间隔和重连计数
+                    reconnectInterval = 2000;
+                    retryCount = 0;
+
+                    // 发送认证消息
                     NetMessage netMessage = new NetMessage();
                     ClientChannelManager.setCurBridgeChannel(future.channel());
                     netMessage.setType(MessageType.AUTH);
                     netMessage.setUri(ClientConfig.appId + "#" + ClientConfig.appSecret);
+
                     future.channel().writeAndFlush(netMessage);
                 } else {
-                    boolean res = waitTime();
-                    if (!res) {
-                        log.error("Connect Server Timeout");
+                    log.warn("Connect To Server Failed.");
+                    waitTime();
+                    if (++retryCount > 10) {
+                        log.error("Retry Connect To Server Side Over Max Retry Limit");
                         return;
                     }
                     log.info("Retry Connect To Server");
@@ -85,9 +94,9 @@ public class Client implements OfflineListener {
     public void handleOffline() {
         log.warn("Connection Offline");
         try {
-            boolean res = waitTime();
-            if (!res) {
-                log.error("Connect Server Timeout");
+            waitTime();
+            if (retryCount++ > 10) {
+                log.error("Retry Connect To Server Side Over Max Retry Limit");
                 return;
             }
         } catch (InterruptedException e) {
@@ -96,15 +105,13 @@ public class Client implements OfflineListener {
         start();
     }
 
-    private boolean waitTime() throws InterruptedException {
+    private void waitTime() throws InterruptedException {
         log.info("Wait {} ms And Retry", reconnectInterval);
         Thread.sleep(reconnectInterval);
         if (reconnectInterval > 32000) {
             reconnectInterval = 2000;
-            return false;
         } else {
             reconnectInterval = reconnectInterval * 2;
         }
-        return true;
     }
 }

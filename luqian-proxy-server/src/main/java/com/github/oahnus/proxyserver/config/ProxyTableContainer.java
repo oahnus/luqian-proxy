@@ -33,7 +33,7 @@ public class ProxyTableContainer extends Observable {
     // appId 代理计数器
     private static Map<String, AtomicInteger> clientCounter = new ConcurrentHashMap<>();
     // 已授权用户 key appId secret apSecret
-    private static Map<String, String> applicationMap = new ConcurrentHashMap<>();
+    private static Map<String, String> applicationMap = new ConcurrentHashMap<>(32);
 
     private static ProxyTableContainer INSTANCE;
 

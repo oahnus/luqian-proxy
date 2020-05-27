@@ -3,6 +3,7 @@ package com.github.oahnus.proxyserver.config;
 import com.github.oahnus.luqiancommon.biz.QueryBuilder;
 import com.github.oahnus.luqiancommon.util.DateUtils;
 import com.github.oahnus.luqiancommon.util.encrypt.AESUtils;
+import com.github.oahnus.proxyserver.bootstrap.ProxyServer;
 import com.github.oahnus.proxyserver.entity.AppTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
 import com.github.oahnus.proxyserver.entity.SysAccount;
@@ -56,5 +57,7 @@ public class ApplicationRunnerListener implements ApplicationRunner {
 
         List<SysAccount> accountList = accountService.selectAll();
         TrafficMeasureMonitor.init(measureList, accountList);
+
+        ProxyServer.getInstance().start();
     }
 }

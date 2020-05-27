@@ -11,10 +11,12 @@ import com.github.oahnus.proxyserver.mapper.ProxyTableMapper;
 import com.github.oahnus.proxyserver.utils.RandomPortUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Created by oahnus on 2020-04-27
@@ -45,24 +47,30 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
 
         updateById(proxyTable);
 
-        // 查找接的proxyTable
-        ProxyTable oldProxyTable = ProxyTableContainer.getInstance()
+        // 查找旧的proxyTable
+        Optional<ProxyTable> optional = ProxyTableContainer.getInstance()
                 .proxyTableMap()
                 .values()
                 .stream()
                 .filter(pt -> pt.getId().equals(proxyTable.getId()))
-                .findFirst()
-                .get();
+                .findFirst();
 
-        Integer port = proxyTable.getPort();
-        if (oldProxyTable.getPort().equals(port)) {
-            // 端口为改变， 替换proxyTable
-            ProxyTableContainer.getInstance().proxyTableMap().put(port, proxyTable);
+        if (optional.isPresent()) {
+            // 替换旧的配置信息
+            Integer port = proxyTable.getPort();
+            ProxyTable oldProxyTable = optional.get();
+            if (oldProxyTable.getPort().equals(port)) {
+                // 端口未改变， 替换proxyTable
+                ProxyTableContainer.getInstance().proxyTableMap().put(port, proxyTable);
+            } else {
+                ProxyTableContainer.getInstance()
+                        .removeProxyTable(oldProxyTable.getAppId(), oldProxyTable.getPort());
+                ProxyTableContainer.getInstance()
+                        .addProxyTable(proxyTable);
+            }
         } else {
-            ProxyTableContainer.getInstance()
-                    .removeProxyTable(oldProxyTable.getAppId(), oldProxyTable.getPort());
-            ProxyTableContainer.getInstance()
-                    .addProxyTable(proxyTable);
+            // 代理配置之前可能为启用，修改了状态后需要将配置添加到map中
+            ProxyTableContainer.getInstance().addProxyTable(proxyTable);
         }
         // 通知观察者
         ProxyTableContainer.getInstance().notifyObservers();

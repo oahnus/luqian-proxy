@@ -112,8 +112,9 @@ public class ProxyServer implements Observer {
                 // 端口 port 已取消映射
                 ChannelFuture future = futureMap.get(port);
                 future.channel().close();
-                // 移除端口和命令Channel的映射
+                // 移除流量统计
                 TrafficMeasureMonitor.removeMeasure(port);
+                // 移除端口和命令Channel的映射
                 ServerChannelManager.removePort2BridgeChannelMapping(port);
                 proxyTableMap.remove(port);
             }
@@ -158,5 +159,7 @@ public class ProxyServer implements Observer {
                 e.printStackTrace();
             }
         }
+
+        TrafficMeasureMonitor.clearInactivePorts(futureMap.keySet());
     }
 }

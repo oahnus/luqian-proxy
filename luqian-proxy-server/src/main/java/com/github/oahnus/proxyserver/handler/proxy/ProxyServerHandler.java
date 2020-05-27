@@ -74,7 +74,11 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
             return;
         }
         String channelId = ctx.channel().attr(Consts.CHANNEL_ID).get();
-        Channel outChannel = bridgeChannel.attr(Consts.OUTSIDE_CHANNELS).get().remove(channelId);
+        Map<String, Channel> outChannels = bridgeChannel.attr(Consts.OUTSIDE_CHANNELS).get();
+        if (outChannels == null) {
+            return;
+        }
+        Channel outChannel = outChannels.remove(channelId);
         if (outChannel != null) {
             outChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
             ctx.channel().attr(Consts.NEXT_CHANNEL).set(null);
@@ -250,9 +254,8 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        System.out.println("err");
         if (cause instanceof IOException) {
-            System.out.println("Connection Break");
+            log.info("Connection Break");
         } else {
             super.exceptionCaught(ctx, cause);
         }

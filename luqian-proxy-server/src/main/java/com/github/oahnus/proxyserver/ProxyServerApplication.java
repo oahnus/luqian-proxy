@@ -25,18 +25,18 @@ public class ProxyServerApplication {
         SpringApplication.run(ProxyServerApplication.class, args);
     }
 
-    @Scheduled(initialDelay = 30000, fixedDelay = 60000)
+    @Scheduled(initialDelay = 30000, fixedDelay = 15000)
     public void printMonitor() {
         String info = TrafficMeasureMonitor.printStatInfo();
         System.out.println(info);
     }
 
-    @Scheduled(initialDelay = 10000, fixedDelay = 60000)
-    public void syncConfig() throws IOException {
-        int version = ProxyTableContainer.getVersion();
-        if (version != syncVersion) {
-            ProxyTableContainer.saveToDisk();
-            syncVersion = version;
-        }
-    }
+//    @Scheduled(initialDelay = 10000, fixedDelay = 60000)
+//    public void syncConfig() throws IOException {
+//        int version = ProxyTableContainer.getVersion();
+//        if (version != syncVersion) {
+//            ProxyTableContainer.saveToDisk();
+//            syncVersion = version;
+//        }
+//    }
 }

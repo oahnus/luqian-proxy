@@ -14,12 +14,12 @@ import org.springframework.stereotype.Component;
 public class NettyBooter implements ApplicationListener<ContextRefreshedEvent> {
     @Override
     public void onApplicationEvent(ContextRefreshedEvent cre) {
-        if (cre.getApplicationContext().getParent() == null) {
-            try {
-                ProxyServer.getInstance().start();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+//        if (cre.getApplicationContext().getParent() == null) {
+//            try {
+//                ProxyServer.getInstance().start();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
     }
 }

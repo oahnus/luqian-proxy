@@ -2,6 +2,8 @@ package com.github.oahnus.proxyserver.config.security;
 
 import com.alibaba.fastjson.JSON;
 import com.github.oahnus.luqiancommon.dto.RespData;
+import com.github.oahnus.proxyserver.entity.SysUser;
+import com.github.oahnus.proxyserver.utils.JwtUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
@@ -21,7 +23,10 @@ public class GoAuthSuccessHandler implements AuthenticationSuccessHandler {
         // 登录成功后, 将用户信息返回
         SysUserDetails sysUserDetails = (SysUserDetails) authentication.getPrincipal();
 
-        response.getWriter().print(JSON.toJSONString(RespData.success(sysUserDetails.getSysUser())));
+        SysUser sysUser = sysUserDetails.getSysUser();
+        String token = JwtUtils.sign(sysUser);
+
+        response.getWriter().print(JSON.toJSONString(RespData.success(token)));
         response.getWriter().flush();
     }
 }

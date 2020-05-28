@@ -25,7 +25,7 @@ public class ProxyServerApplication {
         SpringApplication.run(ProxyServerApplication.class, args);
     }
 
-    @Scheduled(initialDelay = 30000, fixedDelay = 15000)
+//    @Scheduled(initialDelay = 30000, fixedDelay = 15000)
     public void printMonitor() {
         String info = TrafficMeasureMonitor.printStatInfo();
         System.out.println(info);

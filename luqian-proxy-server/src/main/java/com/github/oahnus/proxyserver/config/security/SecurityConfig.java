@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,6 +25,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.channel.ChannelProcessingFilter;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -40,22 +42,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private SysPermService permService;
 
-    public UserDetailsService userDetailsService() {
-        return new UserDetailsService() {
-            @Override
-            public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
-                SysUser sysUser = userService.getUserByUsername(s);
-                if (sysUser == null) {
-                    throw new DisabledException("用户名或密码错误");
-                }
-                return new SysUserDetails(sysUser);
-            }
-        };
-    }
-
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
+        http.csrf().disable()
+                .authorizeRequests()
                 .antMatchers(HttpMethod.GET,
                         "/",
                         "/*.html",
@@ -86,13 +76,31 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .deleteCookies("JSESSIONID")
                 .and()
                 .addFilterBefore(new WebSecurityCorsFilter(), ChannelProcessingFilter.class)
-                .csrf()
-                .disable();
+                .addFilter(new JWTAuthFilter(authenticationManager(), userDetailsService()))
+                .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         super.configure(http);
+    }
+
+    public UserDetailsService userDetailsService() {
+        return new UserDetailsService() {
+            @Override
+            public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
+                if (StringUtils.isEmpty(s)) {
+                    throw new DisabledException("用户名不能为空");
+                }
+                SysUser sysUser = userService.getUserByUsername(s);
+                if (sysUser == null) {
+                    throw new DisabledException("用户名或密码错误");
+                }
+                return new SysUserDetails(sysUser);
+            }
+        };
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.eraseCredentials(false);
         auth.userDetailsService(userDetailsService());
         auth.authenticationProvider(new AuthenticationProvider() {
             @Override

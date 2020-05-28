@@ -21,7 +21,7 @@ public class GoAuthEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException e) throws IOException, ServletException {
         response.setHeader("Content-Type", "application/json;charset=utf-8");
         response.setStatus(HttpStatus.OK.value());
-        response.getWriter().print(JSON.toJSONString(RespData.error(RespCode.NO_AUTH, e.getMessage())));
+        response.getWriter().print(JSON.toJSONString(RespData.error(RespCode.NO_AUTH, "无权限")));
         response.getWriter().flush();
     }
 }

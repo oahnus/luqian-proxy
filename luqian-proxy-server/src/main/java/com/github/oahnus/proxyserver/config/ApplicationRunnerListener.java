@@ -11,6 +11,7 @@ import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import com.github.oahnus.proxyserver.service.AppTableService;
 import com.github.oahnus.proxyserver.service.StatMeasureService;
 import com.github.oahnus.proxyserver.service.SysAccountService;
+import com.github.oahnus.proxyserver.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -32,6 +33,8 @@ public class ApplicationRunnerListener implements ApplicationRunner {
     private String aesSecret;
     @Value("${proxy.aes.offset}")
     private String aesOffset;
+    @Value("${proxy.jwt.secret}")
+    private String jwtSecret;
 
     @Autowired
     AppTableService appTableService;
@@ -43,6 +46,7 @@ public class ApplicationRunnerListener implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         AESUtils.init(aesOffset, aesSecret);
+        JwtUtils.init(jwtSecret);
 
         List<AppTable> appTableList = appTableService.loadAll();
         if (!CollectionUtils.isEmpty(appTableList)) {

@@ -46,6 +46,9 @@ public class JWTAuthFilter extends BasicAuthenticationFilter {
         if (StringUtils.isEmpty(auth)) {
             return null;
         }
+        if (!auth.contains(".")) {
+            return null;
+        }
         String username = JwtUtils.valid(auth);
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

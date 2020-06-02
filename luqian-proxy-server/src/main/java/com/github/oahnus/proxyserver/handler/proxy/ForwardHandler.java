@@ -62,7 +62,9 @@ public class ForwardHandler extends SimpleChannelInboundHandler<ByteBuf> {
         ProxyTable tableItem = ProxyTableContainer.getInstance().getProxyMapping(port);
         String hostPort = tableItem.getServiceAddr();
 
+        // TODO refactor
         String channelId = UUID.randomUUID().toString();
+
         bridgeChannel.attr(Consts.CHANNEL_ID).set(channelId);
         bridgeChannel.attr(Consts.OUTSIDE_CHANNELS).get().put(channelId, outChannel);
 

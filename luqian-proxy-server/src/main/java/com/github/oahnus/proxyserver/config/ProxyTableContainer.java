@@ -30,8 +30,6 @@ public class ProxyTableContainer extends Observable {
     private static AtomicInteger version = new AtomicInteger();
     // 代理记录
     private static Map<Integer, ProxyTable> proxyTableMap = new ConcurrentHashMap<>();
-    // appId 代理计数器
-    private static Map<String, AtomicInteger> clientCounter = new ConcurrentHashMap<>();
     // 已授权用户 key appId secret apSecret
     private static Map<String, String> applicationMap = new ConcurrentHashMap<>(32);
 
@@ -56,10 +54,9 @@ public class ProxyTableContainer extends Observable {
         File file = new File("server.json");
         OutputStream out = new FileOutputStream(file);
         String s1 = JSON.toJSONString(proxyTableMap);
-        String s2 = JSON.toJSONString(clientCounter);
-        String s3 = JSON.toJSONString(applicationMap);
+        String s2 = JSON.toJSONString(applicationMap);
 
-        String s = s1 + "#####" + s2 + "#####" + s3;
+        String s = s1 + "#####" + s2;
         out.write(s.getBytes());
         out.flush();
         out.close();
@@ -79,12 +76,11 @@ public class ProxyTableContainer extends Observable {
             return;
         }
         String[] strings = s.split("#####");
-        if (strings.length != 3) {
+        if (strings.length != 2) {
             return;
         }
         proxyTableMap = JSON.parseObject(strings[0], new TypeReference<Map<Integer, ProxyTable>>() {});
-        clientCounter = JSON.parseObject(strings[1], new TypeReference<Map<String, AtomicInteger>>() {});
-        applicationMap = JSON.parseObject(strings[2], new TypeReference<Map<String, String>>() {});
+        applicationMap = JSON.parseObject(strings[1], new TypeReference<Map<String, String>>() {});
         in.close();
     }
 
@@ -138,19 +134,6 @@ public class ProxyTableContainer extends Observable {
         String appId = proxyTable.getAppId();
         Integer port = proxyTable.getPort();
 
-        // 检查当前appId对应的proxy映射记录数量是否超过限制数量
-        AtomicInteger counter = clientCounter.get(appId);
-        if (counter == null) {
-            counter = new AtomicInteger();
-            clientCounter.put(appId, counter);
-        }
-        int count = counter.get();
-        if (count == 2) {
-            throw new ServiceException("单个appId映射数量不能超过2个");
-        } else {
-            counter.incrementAndGet();
-        }
-
         // 检查端口是否被系统占用
         if (proxyTableMap.containsKey(port) || RandomPortUtils.checkIsUsed(port)) {
             throw new ServiceException("端口已被占用");
@@ -186,5 +169,13 @@ public class ProxyTableContainer extends Observable {
 
     public static ProxyTableContainer getInstance() {
         return INSTANCE;
+    }
+
+    public List<ProxyTable> getProxyList(String appId) {
+        return proxyTableMap()
+                .values()
+                .stream()
+                .filter(p -> p.getAppId().equals(appId))
+                .collect(Collectors.toList());
     }
 }

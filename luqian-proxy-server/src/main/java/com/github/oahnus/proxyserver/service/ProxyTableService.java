@@ -6,7 +6,9 @@ import com.github.oahnus.luqiancommon.generate.SnowFlake;
 import com.github.oahnus.luqiancommon.util.MyCollectionUtils;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
+import com.github.oahnus.proxyserver.entity.SysDomain;
 import com.github.oahnus.proxyserver.exceptions.ServiceException;
+import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.mapper.ProxyTableMapper;
 import com.github.oahnus.proxyserver.utils.RandomPortUtils;
 import org.springframework.stereotype.Service;
@@ -28,22 +30,54 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
 
     public void create(ProxyTable formData) {
         checkProxyTable(formData);
-        Integer port = formData.getPort();
 
-        formData.setId(String.valueOf(snowFlake.generateId()));
-        formData.setCreateTime(new Date());
+        String appId = formData.getAppId();
+        synchronized (appId.intern()) {
+            List<ProxyTable> tableList = selectList(new QueryBuilder(ProxyTable.class)
+                    .eq("appId", appId));
 
-        save(formData);
+            // 检查 单个应用代理设置不能超过3个
+            if (tableList.size() >= 3) {
+                throw new ServiceException("当前应用代理数量超过限制");
+            }
 
-        ProxyTableContainer.getInstance().addProxyTable(formData);
+            if (formData.getIsUseDomain()) {
+                // 分配域名
+                SysDomain domain = DomainManager.borrowDomain(formData.getIsHttps());
+                if (domain == null) {
+                    throw new ServiceException("已无可用域名");
+                }
+                formData.setDomainId(domain.getId());
+                formData.setPort(domain.getPort()); // 设置域名的对外端口
+            }
 
-        // 通知观察者
-        ProxyTableContainer.getInstance().notifyObservers();
+            formData.setId(String.valueOf(snowFlake.generateId()));
+            formData.setCreateTime(new Date());
+
+            save(formData);
+
+            ProxyTableContainer.getInstance().addProxyTable(formData);
+            // 通知观察者
+            ProxyTableContainer.getInstance().notifyObservers();
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void updateInfo(ProxyTable proxyTable) {
         checkProxyTable(proxyTable);
+
+        // TODO
+        // 如果使用域名
+        Boolean isUseDomain = proxyTable.getIsUseDomain();
+        if (isUseDomain) {
+            // 分配域名
+            SysDomain domain = DomainManager.borrowDomain(proxyTable.getIsHttps());
+            if (domain == null) {
+                throw new ServiceException("已无可用域名");
+            }
+            proxyTable.setDomainId(domain.getId());
+            proxyTable.setPort(domain.getPort()); // 设置域名的对外端口
+        }
 
         updateById(proxyTable);
 
@@ -56,20 +90,35 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
                 .findFirst();
 
         if (optional.isPresent()) {
-            // 替换旧的配置信息
-            Integer port = proxyTable.getPort();
-            ProxyTable oldProxyTable = optional.get();
-            if (oldProxyTable.getPort().equals(port)) {
-                // 端口未改变， 替换proxyTable
-                ProxyTableContainer.getInstance().proxyTableMap().put(port, proxyTable);
-            } else {
+            if (isUseDomain) {
+                ProxyTable oldProxyTable = optional.get();
                 ProxyTableContainer.getInstance()
                         .removeProxyTable(oldProxyTable.getAppId(), oldProxyTable.getPort());
                 ProxyTableContainer.getInstance()
                         .addProxyTable(proxyTable);
+            } else {
+                // 替换旧的配置信息
+                Integer port = proxyTable.getPort();
+
+                ProxyTable oldProxyTable = optional.get();
+                if (oldProxyTable.getIsUseDomain()) {
+                    // 旧代理规则如果使用了域名，需要归还域名
+                    DomainManager.returnDomain(oldProxyTable.getDomainId());
+                    proxyTable.setDomainId(null);
+                }
+
+                if (oldProxyTable.getPort().equals(port)) {
+                    // 端口未改变， 替换proxyTable
+                    ProxyTableContainer.getInstance().proxyTableMap().put(port, proxyTable);
+                } else {
+                    ProxyTableContainer.getInstance()
+                            .removeProxyTable(oldProxyTable.getAppId(), oldProxyTable.getPort());
+                    ProxyTableContainer.getInstance()
+                            .addProxyTable(proxyTable);
+                }
             }
         } else {
-            // 代理配置之前可能为启用，修改了状态后需要将配置添加到map中
+            // 代理配置之前可能未启用，修改了状态后需要将配置添加到map中
             ProxyTableContainer.getInstance().addProxyTable(proxyTable);
         }
         // 通知观察者
@@ -79,13 +128,20 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
     private void checkProxyTable(ProxyTable proxyTable) {
         Integer port = proxyTable.getPort();
 
+        // 如果使用域名，不作端口检查
+        if (proxyTable.getIsUseDomain()) {
+            proxyTable.setPort(null);
+            proxyTable.setIsRandom(false);
+            return;
+        }
+
         if (proxyTable.getIsRandom()) {
-            // 随机端口
+            // 随机端口  2000-12000
             port = RandomPortUtils.getOneRandomPort();
         } else {
-            // 检查端口是否在有效范围内
+            // 检查端口是否在有效范围内 2000-20000
             int minPort = 2000;
-            int maxPort = 80000;
+            int maxPort = 20000;
 
             if (port > maxPort || port < minPort) {
                 throw new ServiceException(String.format("有效端口范围[%d, %d],请重新输入", minPort, maxPort));
@@ -132,6 +188,12 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             throw new ServiceException("数据未找到");
         }
         removeById(proxyTable.getId());
+
+        if (proxyTable.getIsUseDomain()) {
+            // 归还http域名
+            DomainManager.returnDomain(proxyTable.getDomainId());
+        }
+
         Boolean isRandom = proxyTable.getIsRandom();
 
         String appId = proxyTable.getAppId();
@@ -164,7 +226,15 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
         Map<Integer, ProxyTable> tableMap = ProxyTableContainer.getInstance().proxyTableMap();
         Map<String, ProxyTable> proxyTableMap = MyCollectionUtils.convertList2Map(tableMap.values(), "id", String.class);
         List<ProxyTable> tableList = selectList(qb);
-        tableList.forEach(pt -> {
+        for (ProxyTable pt : tableList) {
+            // 如果使用域名, 根据id查找对于域名信息
+            if (pt.getIsUseDomain()) {
+                SysDomain domain = DomainManager.getDomain(pt.getDomainId());
+                if (domain != null) {
+                    pt.setDomain(domain.getDomain());
+                }
+                continue;
+            }
             if (pt.getIsRandom()) {
                 // 如果是随机端口, 到Container中查找系统分配的端口号，填充到对象中
                 ProxyTable proxyTable = proxyTableMap.get(pt.getId());
@@ -172,7 +242,8 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
                     pt.setPort(proxyTable.getPort());
                 }
             }
-        });
+        }
+
         return tableList;
     }
 }

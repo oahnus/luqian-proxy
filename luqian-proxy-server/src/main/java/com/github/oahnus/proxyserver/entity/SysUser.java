@@ -3,7 +3,6 @@ package com.github.oahnus.proxyserver.entity;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import org.hibernate.validator.constraints.Length;
 
 import javax.persistence.Id;
 import javax.validation.constraints.NotEmpty;
@@ -27,5 +26,5 @@ public class SysUser {
 
     @JSONField(deserialize = false)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private BigDecimal balance;
+    private BigDecimal balance = BigDecimal.ZERO;
 }

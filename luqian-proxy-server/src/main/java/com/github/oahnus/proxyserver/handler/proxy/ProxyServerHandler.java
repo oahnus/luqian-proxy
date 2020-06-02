@@ -5,11 +5,15 @@ import com.github.oahnus.proxyprotocol.Consts;
 import com.github.oahnus.proxyprotocol.MessageType;
 import com.github.oahnus.proxyprotocol.NetMessage;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
+import com.github.oahnus.proxyserver.entity.ProxyTable;
+import com.github.oahnus.proxyserver.entity.SysDomain;
+import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
@@ -158,10 +162,34 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         ctx.channel().attr(Consts.OUTSIDE_CHANNELS).set(new ConcurrentHashMap<>());
         ServerChannelManager.addBridgeChannel(appId, ctx.channel());
 
-        // send success info
+        // 发送认证成功消息 发送已启动的代理规则
+        List<ProxyTable> proxyTableList = ProxyTableContainer.getInstance().getProxyList(appId);
+        String retMsg = "Authenticate Success.";
+        if (!CollectionUtils.isEmpty(proxyTableList)) {
+            retMsg += "\nAvailable Proxy List:\n";
+            retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n", "Name", "OutSide Port", "Service Addr", "Domain", "Https");
+            for (ProxyTable p : proxyTableList) {
+                if (p.getIsUseDomain()) {
+                    SysDomain domain = DomainManager.getDomain(p.getDomainId());
+                    retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
+                            p.getName(), "-",
+                            p.getServiceAddr(),
+                            domain != null ? domain.getDomain() : "-",
+                            domain != null ? domain.getHttps() : "-");
+                } else {
+                    retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
+                            p.getName(),
+                            p.getPort(),
+                            p.getServiceAddr(),
+                            "-",
+                            "-");
+                }
+            }
+        }
+
         NetMessage netMessage = new NetMessage();
         netMessage.setType(MessageType.INFO);
-        netMessage.setData("Authenticate Success".getBytes());
+        netMessage.setData(retMsg.getBytes());
         ctx.channel().writeAndFlush(netMessage);
     }
 

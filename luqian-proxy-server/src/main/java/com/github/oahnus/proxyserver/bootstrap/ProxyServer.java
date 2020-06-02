@@ -68,7 +68,6 @@ public class ProxyServer implements Observer {
         ChannelFuture future = serverBootstrap.bind(7766).sync();
         if (future.isSuccess()) {
             log.debug("[ProxyServer].start - Netty Start Success Listening On " + 7766);
-            System.out.println("[ProxyServer].start - Netty Start Success Listening On " + 7766);
         }
 
         ServerBootstrap forwardBootstrap = new ServerBootstrap();

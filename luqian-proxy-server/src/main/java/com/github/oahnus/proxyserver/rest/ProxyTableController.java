@@ -3,13 +3,16 @@ package com.github.oahnus.proxyserver.rest;
 import com.github.oahnus.luqiancommon.dto.RespData;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.SysUser;
+import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.service.ProxyTableService;
 import com.github.oahnus.proxyserver.service.SessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by oahnus on 2020-04-16
@@ -52,5 +55,15 @@ public class ProxyTableController {
         SysUser curUser = sessionService.getCurUser();
         List<ProxyTable> proxyTableList = proxyTableService.findList(appId, curUser.getId());
         return RespData.success(proxyTableList);
+    }
+
+    @GetMapping("/domain/size")
+    public RespData checkAvailableDomainSize() {
+        int availableSize = DomainManager.availableSize();
+        int httpsSize = DomainManager.availableHttpsSize();
+        Map<String, Integer> dataMap = new HashMap<>(4);
+        dataMap.put("availableSize", availableSize);
+        dataMap.put("httpsSize", httpsSize);
+        return RespData.success(dataMap);
     }
 }

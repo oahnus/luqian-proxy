@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import javax.persistence.Id;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.Pattern;
 import java.util.Date;
@@ -25,7 +26,13 @@ public class ProxyTable {
     private String serviceAddr;
     private Integer port;  // server端转发端口
     private Boolean isRandom = false; // 是否使用随机端口
+    private Boolean isUseDomain = false; // 是否使用域名
     private Boolean enable;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
+    private Integer domainId; // 分配的域名id
+    private Boolean isHttps = false;
+
+    @Transient
+    private String domain;
 }

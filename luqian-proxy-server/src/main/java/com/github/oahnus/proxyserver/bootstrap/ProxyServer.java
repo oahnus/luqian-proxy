@@ -5,9 +5,11 @@ import com.github.oahnus.proxyprotocol.ProxyProtocolDecoder;
 import com.github.oahnus.proxyprotocol.ProxyProtocolEncoder;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
+import com.github.oahnus.proxyserver.entity.SysDomain;
 import com.github.oahnus.proxyserver.handler.proxy.ForwardHandler;
 import com.github.oahnus.proxyserver.handler.proxy.ProxyServerHandler;
 import com.github.oahnus.proxyserver.handler.stat.StatisticsHandler;
+import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import io.netty.bootstrap.ServerBootstrap;
@@ -102,6 +104,13 @@ public class ProxyServer implements Observer {
         startForwardServer();
     }
 
+    public void closeProxyListener(Integer port) {
+        ChannelFuture future = futureMap.get(port);
+        if (future != null) {
+            future.channel().close();
+        }
+    }
+
     private void startForwardServer() {
         Map<Integer, ProxyTable> proxyTableMap = ProxyTableContainer.getInstance().proxyTableMap();
 
@@ -109,22 +118,35 @@ public class ProxyServer implements Observer {
         for (Integer port : futureMap.keySet()) {
             if (!proxyTableMap.containsKey(port)) {
                 // 端口 port 已取消映射
-                ChannelFuture future = futureMap.get(port);
+                ChannelFuture future = futureMap.remove(port);
                 future.channel().close();
                 // 移除流量统计
                 TrafficMeasureMonitor.removeMeasure(port);
                 // 移除端口和命令Channel的映射
                 ServerChannelManager.removePort2BridgeChannelMapping(port);
-                proxyTableMap.remove(port);
             }
         }
 
         for (Map.Entry<Integer, ProxyTable> entry : proxyTableMap.entrySet()) {
             Integer port = entry.getKey();
             ProxyTable proxyTable = entry.getValue();
+
             String appId = proxyTable.getAppId();
             String serviceAddr = proxyTable.getServiceAddr();
             Long sysUserId = proxyTable.getSysUserId();
+
+            if (proxyTable.getIsUseDomain()) {
+                // 如果使用域名, 从域名池中预分配域名
+                SysDomain domain = DomainManager.borrowDomain(proxyTable.getIsHttps());
+                if (domain == null) {
+                    // 分配域名失败
+                    continue;
+                }
+                port = domain.getPort();
+                proxyTable.setPort(port);
+                proxyTable.setDomain(domain.getDomain());
+                proxyTable.setDomainId(domain.getId());
+            }
 
             // 检查是否已监听端口
             if (futureMap.containsKey(port)) {

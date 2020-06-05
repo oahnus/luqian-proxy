@@ -9,6 +9,7 @@ import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.SysDomain;
 import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
+import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
@@ -17,6 +18,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -82,6 +84,10 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         if (outChannels == null) {
             return;
         }
+        // ChannelId NPE
+        if (channelId == null) {
+            return;
+        }
         Channel outChannel = outChannels.remove(channelId);
         if (outChannel != null) {
             outChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
@@ -143,6 +149,10 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
             return;
         }
 
+        // TODO 检查客户端版本
+        byte[] data = msg.getData();
+        String clientVersion = data == null ? null : new String(data, StandardCharsets.UTF_8);
+
         Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
         if (bridgeChannel != null) {
             // 如果appId已经登录在server端, 向就旧的client发送断线消息
@@ -153,6 +163,11 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
             bridgeChannel.close();
         }
 
+        // 认证成功， 初始化代理配置
+        List<ProxyTable> proxyTableList = ProxyTableContainer.getInstance().initProxyConfig(appId);
+        // init 流量监控
+        proxyTableList.forEach(TrafficMeasureMonitor::createStatMeasure);
+
         List<Integer> serverOutPorts = ProxyTableContainer.getInstance().getServerOutPorts(appId);
         for (Integer port : serverOutPorts) {
             ServerChannelManager.addPort2BridgeChannelMapping(port, ctx.channel());
@@ -162,15 +177,17 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         ctx.channel().attr(Consts.OUTSIDE_CHANNELS).set(new ConcurrentHashMap<>());
         ServerChannelManager.addBridgeChannel(appId, ctx.channel());
 
+        // 刷新配置
+        ProxyTableContainer.getInstance().notifyObservers();
+
         // 发送认证成功消息 发送已启动的代理规则
-        List<ProxyTable> proxyTableList = ProxyTableContainer.getInstance().getProxyList(appId);
         String retMsg = "Authenticate Success.";
         if (!CollectionUtils.isEmpty(proxyTableList)) {
             retMsg += "\nAvailable Proxy List:\n";
             retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n", "Name", "OutSide Port", "Service Addr", "Domain", "Https");
             for (ProxyTable p : proxyTableList) {
                 if (p.getIsUseDomain()) {
-                    SysDomain domain = DomainManager.getDomain(p.getDomainId());
+                    SysDomain domain = DomainManager.getDomain(p.getPort());
                     retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
                             p.getName(), "-",
                             p.getServiceAddr(),
@@ -247,27 +264,35 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
             String appId = ctx.channel().attr(Consts.APP_ID).get();
 
             Channel channel = ServerChannelManager.removeBridgeChannel(appId);
-            if (ctx.channel() != channel) {
+            if (channel != null && ctx.channel() != channel) {
                 ServerChannelManager.addBridgeChannel(appId, ctx.channel());
             }
 
-            List<Integer> ports = channel.attr(Consts.OUTSIDE_PORTS).get();
-            for (int port : ports) {
-                Channel proxyChannel = ServerChannelManager.removePort2BridgeChannelMapping(port);
-                if (proxyChannel == null) {
-                    continue;
+            if (channel != null) {
+                List<Integer> ports = channel.attr(Consts.OUTSIDE_PORTS).get();
+                for (int port : ports) {
+                    Channel proxyChannel = ServerChannelManager.removePort2BridgeChannelMapping(port);
+                    if (proxyChannel == null) {
+                        continue;
+                    }
+
+                    // 在执行断连之前新的连接已经连上来了
+                    if (proxyChannel != channel) {
+                        ServerChannelManager.addPort2BridgeChannelMapping(port, proxyChannel);
+                    } else {
+                        // 移除代理配置
+                        ProxyTableContainer.getInstance().removeProxyTable(appId, port);
+                    }
                 }
 
-                // 在执行断连之前新的连接已经连上来了
-                if (proxyChannel != channel) {
-                    ServerChannelManager.addPort2BridgeChannelMapping(port, proxyChannel);
+                if (channel.isActive()) {
+                    channel.close();
                 }
             }
+            // 刷新server
+            ProxyTableContainer.getInstance().notifyObservers();
 
-            if (channel.isActive()) {
-                channel.close();
-            }
-
+            // 断开 开放端口的连接
             Map<String, Channel> userChannels = ctx.channel().attr(Consts.OUTSIDE_CHANNELS).get();
             for (String channelId : userChannels.keySet()) {
                 Channel userChannel = userChannels.get(channelId);

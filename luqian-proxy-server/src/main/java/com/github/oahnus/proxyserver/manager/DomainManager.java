@@ -38,16 +38,16 @@ public class DomainManager {
         if (sysDomain == null) {
             return null;
         }
-        usedDomains.put(sysDomain.getId(), sysDomain);
+        usedDomains.put(sysDomain.getPort(), sysDomain);
         return sysDomain;
     }
 
-    public static SysDomain getDomain(Integer domainId) {
-        return usedDomains.get(domainId);
+    public static SysDomain getDomain(Integer port) {
+        return usedDomains.get(port);
     }
 
-    public static void returnDomain(Integer domainId) {
-        SysDomain sysDomain = usedDomains.remove(domainId);
+    public static void returnDomain(Integer port) {
+        SysDomain sysDomain = usedDomains.remove(port);
         if (sysDomain != null) {
             if (sysDomain.getHttps()) {
                 httpsDomainPool.offer(sysDomain);

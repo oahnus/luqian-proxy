@@ -69,7 +69,6 @@ public class ClientChannelManager {
         if (PROXY_CHANNEL_POOL.size() < MAX_POOL_SIZE) {
             PROXY_CHANNEL_POOL.offer(proxyChannel);
         } else {
-            // TODO clear attr
             proxyChannel.attr(Consts.APP_ID).set(null);
             proxyChannel.attr(Consts.CHANNEL_ID).set(null);
             proxyChannel.attr(Consts.NEXT_CHANNEL).set(null);

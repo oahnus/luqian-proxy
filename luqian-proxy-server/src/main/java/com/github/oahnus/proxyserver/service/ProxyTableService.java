@@ -66,7 +66,6 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
     public void updateInfo(ProxyTable proxyTable) {
         checkProxyTable(proxyTable);
 
-        // TODO
         // 如果使用域名
         Boolean isUseDomain = proxyTable.getIsUseDomain();
         if (isUseDomain) {
@@ -103,7 +102,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
                 ProxyTable oldProxyTable = optional.get();
                 if (oldProxyTable.getIsUseDomain()) {
                     // 旧代理规则如果使用了域名，需要归还域名
-                    DomainManager.returnDomain(oldProxyTable.getDomainId());
+                    DomainManager.returnDomain(oldProxyTable.getPort());
                     proxyTable.setDomainId(null);
                 }
 
@@ -136,7 +135,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
         }
 
         if (proxyTable.getIsRandom()) {
-            // 随机端口  2000-12000
+            // 随机端口  20000-22000
             port = RandomPortUtils.getOneRandomPort();
         } else {
             // 检查端口是否在有效范围内 2000-20000
@@ -191,7 +190,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
 
         if (proxyTable.getIsUseDomain()) {
             // 归还http域名
-            DomainManager.returnDomain(proxyTable.getDomainId());
+            DomainManager.returnDomain(proxyTable.getPort());
         }
 
         Boolean isRandom = proxyTable.getIsRandom();
@@ -229,7 +228,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
         for (ProxyTable pt : tableList) {
             // 如果使用域名, 根据id查找对于域名信息
             if (pt.getIsUseDomain()) {
-                SysDomain domain = DomainManager.getDomain(pt.getDomainId());
+                SysDomain domain = DomainManager.getDomain(pt.getPort());
                 if (domain != null) {
                     pt.setDomain(domain.getDomain());
                 }
@@ -245,5 +244,11 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
         }
 
         return tableList;
+    }
+
+    public List<ProxyTable> findActiveList(String appId) {
+        return selectList(new QueryBuilder(ProxyTable.class)
+                .eq("appId", appId)
+                .eq("enable", true));
     }
 }

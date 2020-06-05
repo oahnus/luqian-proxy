@@ -12,6 +12,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
+import java.nio.charset.StandardCharsets;
+
 
 /**
  * Created by oahnus on 2020-04-01
@@ -74,6 +76,9 @@ public class Client implements OfflineListener {
                     ClientChannelManager.setCurBridgeChannel(future.channel());
                     netMessage.setType(MessageType.AUTH);
                     netMessage.setUri(ClientConfig.appId + "#" + ClientConfig.appSecret);
+
+                    String clientVersion = ClientConfig.clientVersion;
+                    netMessage.setData(clientVersion.getBytes(StandardCharsets.UTF_8));
 
                     future.channel().writeAndFlush(netMessage);
                 } else {

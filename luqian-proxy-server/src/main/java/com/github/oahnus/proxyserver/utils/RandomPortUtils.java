@@ -11,7 +11,7 @@ import java.util.Random;
  * 10:20.
  */
 public class RandomPortUtils {
-    public static final int RANDOM_PORT_MIN = 12000;
+    public static final int RANDOM_PORT_MIN = 20000;
     public static final int RANDOM_PORT_MAX_COUNT = 2000;
 
     private static Random random = new Random();

@@ -3,19 +3,25 @@ package com.github.oahnus.proxyserver.manager;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
 import com.github.oahnus.proxyserver.entity.SysAccount;
+import com.github.oahnus.proxyserver.enums.SyncStatus;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by oahnus on 2020-04-14
  * 7:09.
  */
 public class TrafficMeasureMonitor {
-    // key -> port
+    // key -> ${port}
     private static Map<Integer, StatMeasure> measureMap = new ConcurrentHashMap<>();
-    // key userId
+    // key ${userId}
     private static Map<Long, SysAccount> accountMap = new ConcurrentHashMap<>();
+    // 等待同步表
+    private static List<StatMeasure> syncWaitList = new CopyOnWriteArrayList<>();
+    // 等待表  key -> ${appId}-${port}
+    private static Map<String, StatMeasure> waitingMap = new ConcurrentHashMap<>();
 
     public static Iterator<Map.Entry<Integer, StatMeasure>> getMeasureIterator() {
         return measureMap.entrySet().iterator();
@@ -44,13 +50,46 @@ public class TrafficMeasureMonitor {
         Long sysUserId = proxyTable.getSysUserId();
         String appId = proxyTable.getAppId();
 
-        if (!measureMap.containsKey(port)) {
-            measureMap.put(port, new StatMeasure(sysUserId, appId, port));
+        StatMeasure statMeasure;
+        String key = appId + "-" + port;
+        // 检查等待表中是否有当前配置的统计对象
+        if (waitingMap.containsKey(key)) {
+            statMeasure = waitingMap.get(key);
+        } else {
+            statMeasure = new StatMeasure(sysUserId, appId, port);
+        }
+
+        StatMeasure oldMeasure = measureMap.put(port, statMeasure);
+        // 如果端口已有数据,  取出旧统计数据, 加入等待表
+        if (oldMeasure != null) {
+            key = oldMeasure.getAppId() + "-" + oldMeasure.getPort();
+            waitingMap.put(key, oldMeasure);
+        }
+
+        // 如果有统计数据未同步到数据库, 加入等待同步列表
+        if (oldMeasure != null && SyncStatus.CHANGED.ordinal() == oldMeasure.getSyncStatus().get()) {
+            syncWaitList.add(oldMeasure);
         }
     }
 
-    public static StatMeasure removeMeasure(Integer port) {
-        return measureMap.remove(port);
+    public static List<StatMeasure> flushSyncWaitList() {
+        List<StatMeasure> measureList = new ArrayList<>();
+        Iterator<StatMeasure> iterator = syncWaitList.iterator();
+        while (iterator.hasNext()) {
+            StatMeasure measure = iterator.next();
+            measureList.add(measure);
+            iterator.remove();
+        }
+        return measureList;
+    }
+
+    public static void removeMeasure(Integer port) {
+        StatMeasure measure = measureMap.remove(port);
+        if (measure == null) {
+            return;
+        }
+        String key = measure.getAppId() + "-" + measure.getPort();
+        waitingMap.put(key, measure);
     }
 
     public static String printStatInfo() {
@@ -73,6 +112,7 @@ public class TrafficMeasureMonitor {
         for (StatMeasure measure : measureMap.values()){
             StatMeasure newVal = new StatMeasure(measure.getUserId(), measure.getAppId(), measure.getPort());
             measureMap.replace(measure.getPort(), newVal);
+
             oldMeasureList.add(measure);
         }
         return oldMeasureList;

@@ -28,6 +28,7 @@ public class StatisticsHandler extends ChannelDuplexHandler {
 
         String appId = ctx.channel().attr(Consts.APP_ID).get();
 
+        // 记录入网流量, 如果流量超过限制, 断开连接
         boolean res = TrafficMeasureMonitor.addInTrafficBytes(port, byteLen);
         if (res) {
             ctx.fireChannelRead(msg);
@@ -35,7 +36,7 @@ public class StatisticsHandler extends ChannelDuplexHandler {
             Channel bridgeChannel = ServerChannelManager.getPort2BridgeChannelMapping(port);
             NetMessage netMessage = new NetMessage();
             netMessage.setType(MessageType.INFO);
-            netMessage.setData("Traffic Amount Overflow".getBytes());
+            netMessage.setData("Traffic Amount Overflow.流量额度已用完".getBytes());
             bridgeChannel.writeAndFlush(netMessage);
             ctx.channel().close();
         }

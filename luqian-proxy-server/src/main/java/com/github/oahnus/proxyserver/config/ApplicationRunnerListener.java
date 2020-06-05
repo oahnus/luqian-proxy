@@ -57,7 +57,7 @@ public class ApplicationRunnerListener implements ApplicationRunner {
 
         // 加载应用数据
         List<AppTable> appTableList = appTableService.loadAll();
-        log.debug("Load App Table Size: {}.", appTableList.size());
+        log.info("Load App Table Size: {}.", appTableList.size());
         if (!CollectionUtils.isEmpty(appTableList)) {
             for (AppTable appTable : appTableList) {
                 ProxyTableContainer.getInstance().addApplication(appTable.getAppId(), appTable.getAppSecret());
@@ -65,23 +65,23 @@ public class ApplicationRunnerListener implements ApplicationRunner {
         }
 
         // 加载流量统计数据
-        log.debug("Load StatMeasure.");
+        log.info("Load StatMeasure.");
         Date today = DateUtils.localDate2date(LocalDate.now());
         List<StatMeasure> measureList = measureService.selectList(new QueryBuilder(StatMeasure.class)
                 .eq("date", today));
 
         // 加载账户数据
         List<SysAccount> accountList = accountService.selectAll();
-        log.debug("Load Sys Account Size: {}.", accountList.size());
+        log.info("Load Sys Account Size: {}.", accountList.size());
         TrafficMeasureMonitor.init(measureList, accountList);
 
         // 加载域名池
         List<SysDomain> sysDomains = sysDomainService.availableList();
-        log.debug("Load Domain Size: {}.", sysDomains.size());
+        log.info("Load Domain Size: {}.", sysDomains.size());
         DomainManager.init(sysDomains);
 
         // 启动netty服务
-        log.debug("Ready Start Proxy Server.");
+        log.info("Ready Start Proxy Server.");
         ProxyServer.getInstance().start();
     }
 }

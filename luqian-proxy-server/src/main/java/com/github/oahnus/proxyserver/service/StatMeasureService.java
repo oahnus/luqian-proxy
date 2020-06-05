@@ -191,6 +191,22 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
             // 复位同步状态
             measure.getSyncStatus().compareAndSet(SyncStatus.SYNCING.ordinal(), SyncStatus.NO_CHANGE.ordinal());
         }
+
+        // 域名 固定端口 的流量统计
+        List<StatMeasure> measureList = TrafficMeasureMonitor.flushSyncWaitList();
+        for (StatMeasure measure : measureList) {
+            // 检查统计对象是否有数据更新
+            int syncStatus = measure.getSyncStatus().getAndSet(SyncStatus.SYNCING.ordinal());
+            if (syncStatus == SyncStatus.NO_CHANGE.ordinal()) {
+                continue;
+            }
+            if (measure.getId() == null) {
+                insertList.add(measure);
+            } else {
+                updateList.add(measure);
+            }
+        }
+
         if (!CollectionUtils.isEmpty(insertList)) {
             saveBatch(insertList);
         }

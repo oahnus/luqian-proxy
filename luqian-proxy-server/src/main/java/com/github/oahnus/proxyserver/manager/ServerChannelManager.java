@@ -24,6 +24,9 @@ public class ServerChannelManager {
     }
 
     public static Channel removeBridgeChannel(String appId) {
+        if (appId == null) {
+            return null;
+        }
         return bridgeChannels.remove(appId);
     }
 

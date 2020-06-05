@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.exceptions.ServiceException;
+import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.service.ProxyTableService;
 import com.github.oahnus.proxyserver.utils.RandomPortUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
@@ -27,7 +28,6 @@ import java.util.stream.Collectors;
  */
 @Component
 public class ProxyTableContainer extends Observable {
-    private static AtomicInteger version = new AtomicInteger();
     // 代理记录
     private static Map<Integer, ProxyTable> proxyTableMap = new ConcurrentHashMap<>();
     // 已授权用户 key appId secret apSecret
@@ -43,10 +43,6 @@ public class ProxyTableContainer extends Observable {
     @PostConstruct
     public void init() {
         INSTANCE = this;
-    }
-
-    public static int getVersion() {
-        return version.get();
     }
 
     public static void saveToDisk() throws IOException {
@@ -89,36 +85,36 @@ public class ProxyTableContainer extends Observable {
     }
 
     public synchronized String addApplication(String appId, String appSecret) {
-        version.incrementAndGet();
         return applicationMap.put(appId, appSecret);
     }
 
     public Map<Integer, ProxyTable> proxyTableMap() {
-        if (proxyTableMap.isEmpty()) {
-            // 如果map为空，尝试从数据库读取proxy配置
-            List<ProxyTable> tableList = proxyTableService.loadAllActive();
-            if (!CollectionUtils.isEmpty(tableList)) {
-                // 将固定port的配置表先存入map, 避免与随机端口冲突
-                tableList.stream()
-                        .filter(pt -> !pt.getIsRandom())
-                        .forEach(pt -> {
-                            proxyTableMap.put(pt.getPort(), pt);
-                        });
-                // 为所有随机端口的配置生成端口
-                tableList.forEach(pt -> {
-                    if (pt.getIsRandom()) {
-                        // 分配随机端口
-                        int port = RandomPortUtils.getOneRandomPort();
-                        while (proxyTableMap.containsKey(port)) {
-                            port = RandomPortUtils.getOneRandomPort();
-                        }
-                        pt.setPort(port);
-                        proxyTableMap.put(port, pt);
-                    }
-                });
-            }
-        }
         return proxyTableMap;
+//        if (proxyTableMap.isEmpty()) {
+//            // 如果map为空，尝试从数据库读取proxy配置
+//            List<ProxyTable> tableList = proxyTableService.loadAllActive();
+//            if (!CollectionUtils.isEmpty(tableList)) {
+//                // 将固定port的配置表先存入map, 避免与随机端口冲突
+//                tableList.stream()
+//                        .filter(pt -> !pt.getIsRandom())
+//                        .forEach(pt -> {
+//                            proxyTableMap.put(pt.getPort(), pt);
+//                        });
+//                // 为所有随机端口的配置生成端口
+//                tableList.forEach(pt -> {
+//                    if (pt.getIsRandom()) {
+//                        // 分配随机端口
+//                        int port = RandomPortUtils.getOneRandomPort();
+//                        while (proxyTableMap.containsKey(port)) {
+//                            port = RandomPortUtils.getOneRandomPort();
+//                        }
+//                        pt.setPort(port);
+//                        proxyTableMap.put(port, pt);
+//                    }
+//                });
+//            }
+//        }
+//        return proxyTableMap;
     }
 
     public List<Integer> getServerOutPorts(String appId) {
@@ -141,7 +137,6 @@ public class ProxyTableContainer extends Observable {
         proxyTableMap.put(port, proxyTable);
 
         setChanged();
-        version.incrementAndGet();
     }
 
     public ProxyTable getProxyMapping(Integer port) {
@@ -162,9 +157,11 @@ public class ProxyTableContainer extends Observable {
         if (!proxyTable.getAppId().equals(appId)) {
             throw new ServiceException("appId与端口信息不匹配");
         }
-        proxyTableMap.remove(port);
+        ProxyTable pt = proxyTableMap.remove(port);
+        if (pt.getIsUseDomain()) {
+            DomainManager.returnDomain(port);
+        }
         setChanged();
-        version.incrementAndGet();
     }
 
     public static ProxyTableContainer getInstance() {
@@ -177,5 +174,36 @@ public class ProxyTableContainer extends Observable {
                 .stream()
                 .filter(p -> p.getAppId().equals(appId))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 客户端认证成功后，初始化代理配置
+     * @param appId
+     * @return
+     */
+    public List<ProxyTable> initProxyConfig(String appId) {
+        List<ProxyTable> tableList = proxyTableService.findActiveList(appId);
+
+        if (!CollectionUtils.isEmpty(tableList)) {
+            // 将固定port的配置表先存入map, 避免与随机端口冲突
+            tableList.stream()
+                    .filter(pt -> !pt.getIsRandom())
+                    .forEach(this::addProxyTable);
+
+            // 为所有随机端口的配置生成端口
+            tableList.forEach(pt -> {
+                if (pt.getIsRandom()) {
+                    // 分配随机端口
+                    int port = RandomPortUtils.getOneRandomPort();
+
+                    while (proxyTableMap.containsKey(port)) {
+                        port = RandomPortUtils.getOneRandomPort();
+                    }
+                    pt.setPort(port);
+                    addProxyTable(pt);
+                }
+            });
+        }
+        return tableList;
     }
 }

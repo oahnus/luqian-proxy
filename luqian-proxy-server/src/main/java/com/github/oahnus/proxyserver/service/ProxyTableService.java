@@ -200,6 +200,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             // 固定端口直接移除
             Integer port = proxyTable.getPort();
             ProxyTableContainer.getInstance().removeProxyTable(appId, port);
+            ProxyTableContainer.getInstance().notifyObservers();
         } else {
             Optional<ProxyTable> optional = ProxyTableContainer.getInstance()
                     .proxyTableMap()
@@ -211,6 +212,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             if (optional.isPresent()) {
                 ProxyTable table = optional.get();
                 ProxyTableContainer.getInstance().removeProxyTable(appId, table.getPort());
+                ProxyTableContainer.getInstance().notifyObservers();
             }
         }
     }

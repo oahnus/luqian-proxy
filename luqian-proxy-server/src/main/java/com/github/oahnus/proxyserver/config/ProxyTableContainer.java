@@ -3,6 +3,7 @@ package com.github.oahnus.proxyserver.config;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
+import com.github.oahnus.proxyserver.entity.SysDomain;
 import com.github.oahnus.proxyserver.exceptions.ServiceException;
 import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.service.ProxyTableService;
@@ -187,10 +188,15 @@ public class ProxyTableContainer extends Observable {
         if (!CollectionUtils.isEmpty(tableList)) {
             // 将固定port的配置表先存入map, 避免与随机端口冲突
             tableList.stream()
-                    .filter(pt -> !pt.getIsRandom())
-                    .forEach(this::addProxyTable);
+                    .filter(pt -> !pt.getIsRandom() && !pt.getIsUseDomain())
+                    .forEach(pt -> {
+                        try {
+                            addProxyTable(pt);
+                        } catch (ServiceException ignore) {}
+                    });
 
             // 为所有随机端口的配置生成端口
+            // 为使用域名的配置生成域名
             tableList.forEach(pt -> {
                 if (pt.getIsRandom()) {
                     // 分配随机端口
@@ -201,6 +207,19 @@ public class ProxyTableContainer extends Observable {
                     }
                     pt.setPort(port);
                     addProxyTable(pt);
+                }
+                if (pt.getIsUseDomain()) {
+                    // 如果使用域名, 从域名池中预分配域名
+                    SysDomain domain = DomainManager.borrowDomain(pt.getIsHttps());
+                    if (domain != null) {
+                        Integer port = domain.getPort();
+                        pt.setPort(port);
+                        pt.setDomain(domain.getDomain());
+                        pt.setDomainId(domain.getId());
+                        addProxyTable(pt);
+                    } else {
+                        // 分配域名失败
+                    }
                 }
             });
         }

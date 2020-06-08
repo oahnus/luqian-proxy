@@ -64,4 +64,15 @@ public class StatMeasure {
     public int decrConnectCount() {
         return this.connectCount.decrementAndGet();
     }
+
+    //重置状态
+    public void resetSync() {
+        syncStatus.compareAndSet(SyncStatus.SYNCING.ordinal(), SyncStatus.NO_CHANGE.ordinal());
+    }
+
+    // 同步正太是否被修改
+    public boolean noChange() {
+        int status = syncStatus.getAndSet(SyncStatus.SYNCING.ordinal());
+        return status == SyncStatus.NO_CHANGE.ordinal();
+    }
 }

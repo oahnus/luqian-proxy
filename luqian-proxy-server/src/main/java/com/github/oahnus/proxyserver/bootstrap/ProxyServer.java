@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by oahnus on 2020-03-31
- * 14:37.
  */
 @Component
 @Slf4j
@@ -64,10 +63,10 @@ public class ProxyServer implements Observer {
                 });
     }
 
-    public void start() throws InterruptedException {
-        ChannelFuture future = serverBootstrap.bind(7766).sync();
+    public void start(Integer port) throws InterruptedException {
+        ChannelFuture future = serverBootstrap.bind(port).sync();
         if (future.isSuccess()) {
-            log.debug("[ProxyServer].start - Netty Start Success Listening On " + 7766);
+            log.info("Netty Start Listening On {} Success.", port);
         }
 
         ServerBootstrap forwardBootstrap = new ServerBootstrap();
@@ -80,13 +79,6 @@ public class ProxyServer implements Observer {
                     ch.pipeline().addLast(new ForwardHandler());
             }
         });
-
-//        try {
-//            ProxyTableConfig.loadFromDisk();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            System.err.println("Load Config Error");
-//        }
 
         // 将ProxyServer添加为观察者, 监听代理配置信息的改变
         ProxyTableContainer.getInstance().addObserver(this);
@@ -161,7 +153,7 @@ public class ProxyServer implements Observer {
                 ChannelFuture future = bootstrap.bind(port).sync();
                 futureMap.put(port, future);
 
-                System.out.println("Bind Outside Port On " + port);
+                log.info("Bind Outside Port On {}", port);
             } catch (Exception e) {
                 e.printStackTrace();
             }

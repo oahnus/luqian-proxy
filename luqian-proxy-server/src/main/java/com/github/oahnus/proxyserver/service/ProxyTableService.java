@@ -230,7 +230,8 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
         for (ProxyTable pt : tableList) {
             // 如果使用域名, 根据id查找对于域名信息
             if (pt.getIsUseDomain()) {
-                SysDomain domain = DomainManager.getDomain(pt.getPort());
+                ProxyTable activePt = proxyTableMap.get(pt.getId());
+                SysDomain domain = DomainManager.getDomain(activePt.getPort());
                 if (domain != null) {
                     pt.setDomain(domain.getDomain());
                 }

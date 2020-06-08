@@ -41,7 +41,7 @@ public class SysAccountService extends BaseService<SysAccountMapper, SysAccount,
 
     @Scheduled(cron = "0 */2 * * * *")
     public void sync() {
-        log.info("Sync Account");
+        log.info("Sync Account To Database");
         Iterator<Map.Entry<Long, SysAccount>> iterator = TrafficMeasureMonitor.getAccountIterator();
         List<SysAccount> accountList = new ArrayList<>();
         while (iterator.hasNext()) {

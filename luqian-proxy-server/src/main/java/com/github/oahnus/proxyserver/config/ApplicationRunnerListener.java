@@ -40,6 +40,8 @@ public class ApplicationRunnerListener implements ApplicationRunner {
     private String aesOffset;
     @Value("${proxy.jwt.secret}")
     private String jwtSecret;
+    @Value("${proxy.server.port}")
+    private Integer serverPort;
 
     @Autowired
     private AppTableService appTableService;
@@ -82,6 +84,6 @@ public class ApplicationRunnerListener implements ApplicationRunner {
 
         // 启动netty服务
         log.info("Ready Start Proxy Server.");
-        ProxyServer.getInstance().start();
+        ProxyServer.getInstance().start(serverPort);
     }
 }

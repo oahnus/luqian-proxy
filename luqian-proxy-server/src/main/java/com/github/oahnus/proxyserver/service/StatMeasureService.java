@@ -6,7 +6,6 @@ import com.github.oahnus.luqiancommon.util.DateUtils;
 import com.github.oahnus.proxyserver.dto.Statistics;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
 import com.github.oahnus.proxyserver.entity.SysAccount;
-import com.github.oahnus.proxyserver.enums.SyncStatus;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import com.github.oahnus.proxyserver.mapper.StatMeasureMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -170,7 +169,7 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
     // todo 替换掉Spring Schedule
     @Scheduled(cron = "0 */2 * * * *")
     public void sync() {
-        log.info("Sync Measure To Database");
+        log.info("Sync Statistics Measure To Database");
         Iterator<Map.Entry<Integer, StatMeasure>> iterator = TrafficMeasureMonitor.getMeasureIterator();
         List<StatMeasure> insertList = new ArrayList<>();
         List<StatMeasure> updateList = new ArrayList<>();
@@ -179,8 +178,7 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
             StatMeasure measure = entry.getValue();
 
             // 检查统计对象是否有数据更新
-            int syncStatus = measure.getSyncStatus().getAndSet(SyncStatus.SYNCING.ordinal());
-            if (syncStatus == SyncStatus.NO_CHANGE.ordinal()) {
+            if (measure.noChange()) {
                 continue;
             }
             if (measure.getId() == null) {
@@ -189,15 +187,14 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
                 updateList.add(measure);
             }
             // 复位同步状态
-            measure.getSyncStatus().compareAndSet(SyncStatus.SYNCING.ordinal(), SyncStatus.NO_CHANGE.ordinal());
+            measure.resetSync();
         }
 
-        // 域名 固定端口 的流量统计
+        // flush 同步等待列表 （端口冲突的统计对象会被移入同步等待流标）
         List<StatMeasure> measureList = TrafficMeasureMonitor.flushSyncWaitList();
         for (StatMeasure measure : measureList) {
             // 检查统计对象是否有数据更新
-            int syncStatus = measure.getSyncStatus().getAndSet(SyncStatus.SYNCING.ordinal());
-            if (syncStatus == SyncStatus.NO_CHANGE.ordinal()) {
+            if (measure.noChange()) {
                 continue;
             }
             if (measure.getId() == null) {
@@ -213,6 +210,6 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
         if (!CollectionUtils.isEmpty(updateList)) {
             updateBatchById(updateList);
         }
-        log.info("Sync Finish");
+        log.info("Sync Statistics Measure Finish");
     }
 }

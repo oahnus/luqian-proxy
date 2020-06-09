@@ -47,7 +47,6 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
                 if (domain == null) {
                     throw new ServiceException("已无可用域名");
                 }
-                formData.setDomainId(domain.getId());
                 formData.setPort(domain.getPort()); // 设置域名的对外端口
             }
 
@@ -74,7 +73,6 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             if (domain == null) {
                 throw new ServiceException("已无可用域名");
             }
-            proxyTable.setDomainId(domain.getId());
             proxyTable.setPort(domain.getPort()); // 设置域名的对外端口
         }
 
@@ -103,7 +101,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
                 if (oldProxyTable.getIsUseDomain()) {
                     // 旧代理规则如果使用了域名，需要归还域名
                     DomainManager.returnDomain(oldProxyTable.getPort());
-                    proxyTable.setDomainId(null);
+                    oldProxyTable.setPort(null);
                 }
 
                 if (oldProxyTable.getPort().equals(port)) {

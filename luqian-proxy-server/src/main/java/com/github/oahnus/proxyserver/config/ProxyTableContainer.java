@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -215,7 +214,6 @@ public class ProxyTableContainer extends Observable {
                         Integer port = domain.getPort();
                         pt.setPort(port);
                         pt.setDomain(domain.getDomain());
-                        pt.setDomainId(domain.getId());
                         addProxyTable(pt);
                     } else {
                         // 分配域名失败

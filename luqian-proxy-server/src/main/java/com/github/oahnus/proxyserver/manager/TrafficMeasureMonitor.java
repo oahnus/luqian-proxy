@@ -73,13 +73,8 @@ public class TrafficMeasureMonitor {
     }
 
     public static List<StatMeasure> flushSyncWaitList() {
-        List<StatMeasure> measureList = new ArrayList<>();
-        Iterator<StatMeasure> iterator = syncWaitList.iterator();
-        while (iterator.hasNext()) {
-            StatMeasure measure = iterator.next();
-            measureList.add(measure);
-            iterator.remove();
-        }
+        List<StatMeasure> measureList = new ArrayList<>(syncWaitList);
+        syncWaitList.removeAll(measureList);
         return measureList;
     }
 

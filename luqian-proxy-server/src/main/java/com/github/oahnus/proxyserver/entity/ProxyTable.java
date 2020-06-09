@@ -30,7 +30,6 @@ public class ProxyTable {
     private Boolean enable;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
-    private Integer domainId; // 分配的域名id
     private Boolean isHttps = false;
 
     @Transient

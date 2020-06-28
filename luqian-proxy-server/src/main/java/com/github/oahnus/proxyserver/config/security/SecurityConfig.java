@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
  */
 @EnableWebSecurity
 @Configuration
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private SysUserService userService;
@@ -55,7 +57,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .permitAll()
                 .antMatchers(HttpMethod.OPTIONS)//跨域请求会先进行一次options请求
                 .permitAll()
-                .antMatchers("/login", "/register")
+                .antMatchers("/login", "/register", "/version/**")
                 .permitAll()
                 .anyRequest()
                 .authenticated()
@@ -93,7 +95,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 if (sysUser == null) {
                     throw new DisabledException("用户名或密码错误");
                 }
-                return new SysUserDetails(sysUser);
+
+                Long userId = sysUser.getId();
+
+                List<SysPermission> permissions = permService.listByUserId(userId);
+                List<SimpleGrantedAuthority> authorities = permissions.stream().map(perm -> {
+                    String value = perm.getValue();
+                    return new SimpleGrantedAuthority(value);
+                }).collect(Collectors.toList());
+
+                SysUserDetails userDetails = new SysUserDetails(sysUser);
+                userDetails.setAuthorities(authorities);
+                return userDetails;
             }
         };
     }
@@ -109,26 +122,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 String password = (String) authentication.getCredentials();
 
                 UserDetails userDetails = userDetailsService().loadUserByUsername(name);
-                if (userDetails == null) {
-                    throw new DisabledException("用户名或密码错误");
-                }
-                if (!passwordEncoder().matches(password, userDetails.getPassword())) {
-                    throw new DisabledException("用户名或密码错误");
-                }
-
-                SysUserDetails sysUserDetails = (SysUserDetails) userDetails;
-                SysUser sysUser = sysUserDetails.getSysUser();
-                Long userId = sysUser.getId();
-
-                List<SysPermission> permissions = permService.listByUserId(userId);
-                List<SimpleGrantedAuthority> authorities = permissions.stream().map(perm -> {
-                    String value = perm.getValue();
-                    return new SimpleGrantedAuthority(value);
-                }).collect(Collectors.toList());
-
-                sysUserDetails.setAuthorities(authorities);
-
-                return new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(), authorities);
+                return new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(), userDetails.getAuthorities());
             }
 
             @Override

@@ -1,13 +1,16 @@
 package com.github.oahnus.proxyserver.rest;
 
 import com.github.oahnus.luqiancommon.dto.RespData;
+import com.github.oahnus.proxyserver.entity.SysPermission;
 import com.github.oahnus.proxyserver.entity.SysUser;
 import com.github.oahnus.proxyserver.service.SessionService;
+import com.github.oahnus.proxyserver.service.SysPermService;
 import com.github.oahnus.proxyserver.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * Created by oahnus on 2020-05-01
@@ -17,9 +20,11 @@ import javax.validation.Valid;
 @RequestMapping
 public class SysUserController {
     @Autowired
-    SysUserService userService;
+    private SysUserService userService;
     @Autowired
-    SessionService sessionService;
+    private SessionService sessionService;
+    @Autowired
+    private SysPermService sysPermService;
 
     @PostMapping("register")
     public RespData register(@RequestBody @Valid SysUser sysUser) {
@@ -30,6 +35,8 @@ public class SysUserController {
     @GetMapping("/userInfo")
     public RespData userInfo() {
         SysUser curUser = sessionService.getCurUser();
+        List<SysPermission> permissionList = sysPermService.listByUserId(curUser.getId());
+        curUser.setPermissionList(permissionList);
         return RespData.success(curUser);
     }
 }

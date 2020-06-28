@@ -34,4 +34,6 @@ public class ProxyTable {
 
     @Transient
     private String domain;
+    @Transient
+    private Boolean active = false;
 }

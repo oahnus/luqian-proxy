@@ -34,6 +34,7 @@ public class SysPermService extends BaseService<SysPermMapper, SysPermission, Lo
                 .collect(Collectors.toList());
 
         return selectList(new QueryBuilder(SysPermission.class)
-                .in("id", permIds));
+                .in("id", permIds)
+                .eq("enable", true));
     }
 }

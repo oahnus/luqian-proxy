@@ -1,6 +1,7 @@
 package com.github.oahnus.proxyserver.manager;
 
 import com.github.oahnus.proxyserver.entity.SysDomain;
+import com.github.oahnus.proxyserver.exceptions.ServiceException;
 
 import java.util.List;
 import java.util.Map;
@@ -29,8 +30,26 @@ public class DomainManager {
         }
     }
 
-    public static void refresh(List<SysDomain> domainList) {
+    public static void addDomain(SysDomain sysDomain) {
+        if (sysDomain == null) {
+            return;
+        }
+        if (sysDomain.getHttps()) {
+            httpsDomainPool.offer(sysDomain);
+        } else {
+            httpDomainPool.offer(sysDomain);
+        }
+    }
 
+    public static void replaceDomain(SysDomain sysDomain) {
+        Integer domainId = sysDomain.getId();
+        removeDomain(domainId);
+        // 移除后, 将新队列加入队列
+        if (sysDomain.getHttps()) {
+            httpsDomainPool.add(sysDomain);
+        } else {
+            httpDomainPool.add(sysDomain);
+        }
     }
 
     public static SysDomain borrowDomain(Boolean isHttps) {
@@ -42,8 +61,12 @@ public class DomainManager {
         return sysDomain;
     }
 
-    public static SysDomain getDomain(Integer port) {
+    public static SysDomain getActiveDomain(Integer port) {
         return usedDomains.get(port);
+    }
+
+    public static Boolean isActive(Integer port) {
+        return usedDomains.containsKey(port);
     }
 
     public static void returnDomain(Integer port) {
@@ -63,5 +86,14 @@ public class DomainManager {
 
     public static int availableHttpsSize() {
         return httpsDomainPool.size();
+    }
+
+    public static void removeDomain(Integer domainId) {
+        boolean res1 = httpDomainPool.removeIf(d -> d.getId().equals(domainId));
+        boolean res2 = httpsDomainPool.removeIf(d -> d.getId().equals(domainId));
+        if (!res1 && !res2) {
+            // 两个队列中没有找到对象, 域名可能已被借用
+            throw new ServiceException("域名正在使用中, 请稍后再操作");
+        }
     }
 }

@@ -14,5 +14,11 @@ spring:
     username: root
     password: root
     driver-class-name: com.mysql.jdbc.Driver
+    hikari:
+      maximumPoolSize: 10
+      minimumIdle: 2
+      idleTimeout: 300000
+      connectionTimeout: 30000
+      maxLifetime: 600000
 luqian:
   inject: false

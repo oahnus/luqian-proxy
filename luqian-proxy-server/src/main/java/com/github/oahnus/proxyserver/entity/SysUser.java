@@ -5,8 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import javax.persistence.Id;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotEmpty;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Created by oahnus on 2020-04-22
@@ -27,4 +29,7 @@ public class SysUser {
     @JSONField(deserialize = false)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private BigDecimal balance = BigDecimal.ZERO;
+
+    @Transient
+    private List<SysPermission> permissionList;
 }

@@ -187,7 +187,7 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
             retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n", "Name", "OutSide Port", "Service Addr", "Domain", "Https");
             for (ProxyTable p : proxyTableList) {
                 if (p.getIsUseDomain()) {
-                    SysDomain domain = DomainManager.getDomain(p.getPort());
+                    SysDomain domain = DomainManager.getActiveDomain(p.getPort());
                     retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
                             p.getName(), "-",
                             p.getServiceAddr(),

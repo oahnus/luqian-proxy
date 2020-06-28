@@ -226,10 +226,14 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
         Map<String, ProxyTable> proxyTableMap = MyCollectionUtils.convertList2Map(tableMap.values(), "id", String.class);
         List<ProxyTable> tableList = selectList(qb);
         for (ProxyTable pt : tableList) {
+            ProxyTable activePt = proxyTableMap.get(pt.getId());
+            pt.setActive(activePt != null);
             // 如果使用域名, 根据id查找对于域名信息
             if (pt.getIsUseDomain()) {
-                ProxyTable activePt = proxyTableMap.get(pt.getId());
-                SysDomain domain = DomainManager.getDomain(activePt.getPort());
+                if (activePt == null) {
+                    continue;
+                }
+                SysDomain domain = DomainManager.getActiveDomain(activePt.getPort());
                 if (domain != null) {
                     pt.setDomain(domain.getDomain());
                 }

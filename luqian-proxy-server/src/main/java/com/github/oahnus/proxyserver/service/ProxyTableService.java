@@ -176,7 +176,13 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             throw new ServiceException("数据未找到");
         }
         removeById(proxyTable.getId());
-        if (!proxyTable.getEnable()) {
+
+        String appId = proxyTable.getAppId();
+        Channel bridgeChannel = ServerChannelManager.getBridgeChannel(proxyTable.getAppId());
+        boolean isClientOnline = bridgeChannel != null;
+
+        if (!isClientOnline) {
+            // 客户端离线时，直接删除配置
             return;
         }
 
@@ -187,7 +193,6 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
 
         Boolean isRandom = proxyTable.getIsRandom();
 
-        String appId = proxyTable.getAppId();
         if (!isRandom) {
             // 固定端口直接移除
             Integer port = proxyTable.getPort();

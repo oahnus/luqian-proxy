@@ -9,8 +9,10 @@ import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.SysDomain;
 import com.github.oahnus.proxyserver.exceptions.ServiceException;
 import com.github.oahnus.proxyserver.manager.DomainManager;
+import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import com.github.oahnus.proxyserver.mapper.ProxyTableMapper;
 import com.github.oahnus.proxyserver.utils.RandomPortUtils;
+import io.netty.channel.Channel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -55,9 +57,14 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
 
             save(formData);
 
-            ProxyTableContainer.getInstance().addProxyTable(formData);
-            // 通知观察者
-            ProxyTableContainer.getInstance().notifyObservers(formData.getAppId());
+            Channel bridgeChannel = ServerChannelManager.getBridgeChannel(formData.getAppId());
+            boolean isClientOnline = bridgeChannel != null;
+
+            if (formData.getEnable() && isClientOnline) {
+                ProxyTableContainer.getInstance().addProxyTable(formData);
+                // 通知观察者
+                ProxyTableContainer.getInstance().notifyObservers(formData.getAppId());
+            }
         }
     }
 
@@ -97,7 +104,9 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             ProxyTableContainer.getInstance()
                     .removeProxyTable(oldProxyTable.getAppId(), oldPort);
         }
-        if (enable) {
+        Channel bridgeChannel = ServerChannelManager.getBridgeChannel(proxyTable.getAppId());
+        boolean isClientOnline = bridgeChannel != null;
+        if (enable && isClientOnline) {
             ProxyTableContainer.getInstance().addProxyTable(proxyTable);
         }
         // 通知观察者

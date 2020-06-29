@@ -182,10 +182,11 @@ public class ProxyServer implements Observer {
             }
             // 取当前用户已有命令channel(bridgeChannel), 添加新端口和命令channel的映射
             Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
-            if (bridgeChannel != null) {
-                ServerChannelManager.addPort2BridgeChannelMapping(port, bridgeChannel);
+            if (bridgeChannel == null) {
+                // 客户端未连接
+                continue;
             }
-
+            ServerChannelManager.addPort2BridgeChannelMapping(port, bridgeChannel);
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)

@@ -176,6 +176,9 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             throw new ServiceException("数据未找到");
         }
         removeById(proxyTable.getId());
+        if (!proxyTable.getEnable()) {
+            return;
+        }
 
         if (proxyTable.getIsUseDomain()) {
             // 归还http域名

@@ -1,15 +1,16 @@
 package com.github.oahnus.proxyserver.bootstrap;
 
-import com.github.oahnus.proxyprotocol.IdleCheckHandler;
-import com.github.oahnus.proxyprotocol.ProxyProtocolDecoder;
-import com.github.oahnus.proxyprotocol.ProxyProtocolEncoder;
+import com.github.oahnus.proxyprotocol.*;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
+import com.github.oahnus.proxyserver.entity.SysDomain;
 import com.github.oahnus.proxyserver.handler.proxy.ForwardHandler;
 import com.github.oahnus.proxyserver.handler.proxy.ProxyServerHandler;
 import com.github.oahnus.proxyserver.handler.stat.StatisticsHandler;
+import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
+import com.mysql.fabric.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -17,11 +18,13 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 /**
  * Created by oahnus on 2020-03-31
@@ -34,6 +37,10 @@ public class ProxyServer implements Observer {
     private ServerBootstrap serverBootstrap;
 
     private static Map<Integer, ChannelFuture> futureMap = new ConcurrentHashMap<>();
+
+    private static ExecutorService executor = new ThreadPoolExecutor(10, 10,
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>());
 
     // 单例
     private static class SingletonProxyServer {
@@ -89,9 +96,52 @@ public class ProxyServer implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
-        ProxyTableContainer proxyTable = (ProxyTableContainer) o;
+        final ProxyTableContainer proxyTable = (ProxyTableContainer) o;
         // 配置信息已修改
-        startForwardServer();
+        executor.submit(() -> {
+            try {
+                startForwardServer();
+                if (arg != null) {
+                    sendProxyTable((String)arg);
+                }
+            } catch (Exception e) {
+                log.error("应用配置失败");
+            }
+        });
+    }
+
+    private void sendProxyTable(String appId) {
+        List<ProxyTable> proxyTableList = ProxyTableContainer.getInstance().getProxyList(appId);
+        Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
+        if (bridgeChannel == null || proxyTableList.isEmpty()) {
+            return;
+        }
+        // 发送已启动的代理规则
+        String retMsg = "";
+        retMsg += "\n\nAvailable Proxy List:\n";
+        retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n", "Name", "OutSide Port", "Service Addr", "Domain", "Https");
+        for (ProxyTable p : proxyTableList) {
+            if (p.getIsUseDomain()) {
+                SysDomain domain = DomainManager.getActiveDomain(p.getPort());
+                retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
+                        p.getName(), "-",
+                        p.getServiceAddr(),
+                        domain != null ? domain.getDomain() : "-",
+                        domain != null ? domain.getHttps() : "-");
+            } else {
+                retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
+                        p.getName(),
+                        p.getPort(),
+                        p.getServiceAddr(),
+                        "-",
+                        "-");
+            }
+        }
+
+        NetMessage netMessage = new NetMessage();
+        netMessage.setType(MessageType.INFO);
+        netMessage.setData(retMsg.getBytes());
+        bridgeChannel.writeAndFlush(netMessage);
     }
 
     public void closeProxyListener(Integer port) {

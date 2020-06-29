@@ -57,7 +57,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
 
             ProxyTableContainer.getInstance().addProxyTable(formData);
             // 通知观察者
-            ProxyTableContainer.getInstance().notifyObservers();
+            ProxyTableContainer.getInstance().notifyObservers(formData.getAppId());
         }
     }
 
@@ -67,7 +67,8 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
 
         // 如果使用域名
         Boolean isUseDomain = proxyTable.getIsUseDomain();
-        if (isUseDomain) {
+        Boolean enable = proxyTable.getEnable();
+        if (enable && isUseDomain) {
             // 分配域名
             SysDomain domain = DomainManager.borrowDomain(proxyTable.getIsHttps());
             if (domain == null) {
@@ -87,39 +88,20 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
                 .findFirst();
 
         if (optional.isPresent()) {
-            if (isUseDomain) {
-                ProxyTable oldProxyTable = optional.get();
-                ProxyTableContainer.getInstance()
-                        .removeProxyTable(oldProxyTable.getAppId(), oldProxyTable.getPort());
-                ProxyTableContainer.getInstance()
-                        .addProxyTable(proxyTable);
-            } else {
-                // 替换旧的配置信息
-                Integer port = proxyTable.getPort();
-
-                ProxyTable oldProxyTable = optional.get();
-                if (oldProxyTable.getIsUseDomain()) {
-                    // 旧代理规则如果使用了域名，需要归还域名
-                    DomainManager.returnDomain(oldProxyTable.getPort());
-                    oldProxyTable.setPort(null);
-                }
-
-                if (oldProxyTable.getPort().equals(port)) {
-                    // 端口未改变， 替换proxyTable
-                    ProxyTableContainer.getInstance().proxyTableMap().put(port, proxyTable);
-                } else {
-                    ProxyTableContainer.getInstance()
-                            .removeProxyTable(oldProxyTable.getAppId(), oldProxyTable.getPort());
-                    ProxyTableContainer.getInstance()
-                            .addProxyTable(proxyTable);
-                }
+            ProxyTable oldProxyTable = optional.get();
+            Integer oldPort = oldProxyTable.getPort();
+            if (oldProxyTable.getIsUseDomain()) {
+                // 旧代理规则如果使用了域名，需要归还域名
+                DomainManager.returnDomain(oldPort);
             }
-        } else {
-            // 代理配置之前可能未启用，修改了状态后需要将配置添加到map中
+            ProxyTableContainer.getInstance()
+                    .removeProxyTable(oldProxyTable.getAppId(), oldPort);
+        }
+        if (enable) {
             ProxyTableContainer.getInstance().addProxyTable(proxyTable);
         }
         // 通知观察者
-        ProxyTableContainer.getInstance().notifyObservers();
+        ProxyTableContainer.getInstance().notifyObservers(proxyTable.getAppId());
     }
 
     private void checkProxyTable(ProxyTable proxyTable) {
@@ -198,7 +180,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             // 固定端口直接移除
             Integer port = proxyTable.getPort();
             ProxyTableContainer.getInstance().removeProxyTable(appId, port);
-            ProxyTableContainer.getInstance().notifyObservers();
+            ProxyTableContainer.getInstance().notifyObservers(appId);
         } else {
             Optional<ProxyTable> optional = ProxyTableContainer.getInstance()
                     .proxyTableMap()
@@ -210,7 +192,7 @@ public class ProxyTableService extends BaseService<ProxyTableMapper, ProxyTable,
             if (optional.isPresent()) {
                 ProxyTable table = optional.get();
                 ProxyTableContainer.getInstance().removeProxyTable(appId, table.getPort());
-                ProxyTableContainer.getInstance().notifyObservers();
+                ProxyTableContainer.getInstance().notifyObservers(appId);
             }
         }
     }

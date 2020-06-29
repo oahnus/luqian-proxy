@@ -177,37 +177,16 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         ctx.channel().attr(Consts.OUTSIDE_CHANNELS).set(new ConcurrentHashMap<>());
         ServerChannelManager.addBridgeChannel(appId, ctx.channel());
 
-        // 刷新配置
-        ProxyTableContainer.getInstance().notifyObservers();
-
-        // 发送认证成功消息 发送已启动的代理规则
+        // 发送认证成功消息
         String retMsg = "Authenticate Success.";
-        if (!CollectionUtils.isEmpty(proxyTableList)) {
-            retMsg += "\nAvailable Proxy List:\n";
-            retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n", "Name", "OutSide Port", "Service Addr", "Domain", "Https");
-            for (ProxyTable p : proxyTableList) {
-                if (p.getIsUseDomain()) {
-                    SysDomain domain = DomainManager.getActiveDomain(p.getPort());
-                    retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
-                            p.getName(), "-",
-                            p.getServiceAddr(),
-                            domain != null ? domain.getDomain() : "-",
-                            domain != null ? domain.getHttps() : "-");
-                } else {
-                    retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
-                            p.getName(),
-                            p.getPort(),
-                            p.getServiceAddr(),
-                            "-",
-                            "-");
-                }
-            }
-        }
 
         NetMessage netMessage = new NetMessage();
         netMessage.setType(MessageType.INFO);
         netMessage.setData(retMsg.getBytes());
         ctx.channel().writeAndFlush(netMessage);
+
+        // 刷新配置
+        ProxyTableContainer.getInstance().notifyObservers(appId);
     }
 
     private void handleConnectMessage(ChannelHandlerContext ctx, NetMessage msg) {

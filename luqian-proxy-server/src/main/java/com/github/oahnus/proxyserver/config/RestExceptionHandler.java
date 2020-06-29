@@ -18,6 +18,7 @@ public class RestExceptionHandler {
     @ExceptionHandler(ServiceException.class)
     public RespData serviceExceptionHandler(RuntimeException e) {
         Throwable cause = e.getCause();
+//        e.printStackTrace();
         if (cause instanceof ServiceException){
             ServiceException serviceException = (ServiceException) cause;
             return RespData.error(RespCode.SERVICE_ERROR, serviceException.getMessage());

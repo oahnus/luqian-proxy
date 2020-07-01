@@ -32,13 +32,12 @@ public class ClientCmd {
             if (file.exists()) {
                 @Cleanup FileInputStream in = new FileInputStream(file);
                 properties.load(in);
-
             } else {
                 @Cleanup FileOutputStream out = new FileOutputStream(file);
                 properties.setProperty("host", ClientConfig.defaultHost);
                 properties.setProperty("port", ClientConfig.defaultPort);
-                properties.setProperty("appId", ClientConfig.defaultAppId);
-                properties.setProperty("appSecret", ClientConfig.defaultAppSecret);
+                properties.setProperty("appId", "");
+                properties.setProperty("appSecret", "");
 
                 properties.store(out, "luqian-proxy config file");
             }
@@ -46,7 +45,6 @@ public class ClientCmd {
             ClientConfig.serverPort = Integer.parseInt(properties.getProperty("port"));
             ClientConfig.appId = properties.getProperty("appId");
             ClientConfig.appSecret = properties.getProperty("appSecret");
-
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
                 log.error(e.getMessage());

@@ -119,26 +119,20 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
 
                             ClientChannelManager.addServiceChannel(channelId, serviceChannel);
 
-                            NetMessage msg = new NetMessage();
-                            msg.setType(MessageType.CONNECT);
-                            msg.setUri(appId + "#" + channelId);
+                            NetMessage msg = NetMessage.connect(appId, channelId, null);
                             proxyChannel.writeAndFlush(msg);
                             serviceChannel.config().setOption(ChannelOption.AUTO_READ, true);
                         }
 
                         @Override
                         public void fail() {
-                            NetMessage message = new NetMessage();
-                            message.setType(MessageType.DISCONNECT);
-                            message.setUri(appId + "#" + channelId);
+                            NetMessage message = NetMessage.disconnect(appId, channelId, null);
                             bridgeChannel.writeAndFlush(message);
                         }
                     });
                 } else {
                     // disconnect
-                    NetMessage msg = new NetMessage();
-                    msg.setType(MessageType.DISCONNECT);
-                    msg.setUri(appId + "#" + channelId);
+                    NetMessage msg = NetMessage.disconnect(appId, channelId, null);
                     bridgeChannel.writeAndFlush(msg);
                 }
             }
@@ -180,7 +174,9 @@ public class ClientHandler extends SimpleChannelInboundHandler<NetMessage> {
         } else if(cause instanceof RuntimeException) {
             System.err.println(cause.getMessage());
             log.error(cause.getMessage());
+
             ctx.channel().close();
+
             if (cause.getMessage().startsWith("AppId Conflicted")) {
                 System.exit(0);
             }

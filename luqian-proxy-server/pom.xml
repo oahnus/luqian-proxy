@@ -14,6 +14,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>29.0-jre</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.github.oahnus</groupId>
             <artifactId>luqian-proxy-protocol</artifactId>
             <version>0.0.1</version>

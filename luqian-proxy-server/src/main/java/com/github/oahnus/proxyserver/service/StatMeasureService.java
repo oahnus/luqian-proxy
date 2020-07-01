@@ -46,6 +46,11 @@ public class StatMeasureService extends BaseService<StatMeasureMapper, StatMeasu
     }
 
 
+    /**
+     * 生成首屏统计报告
+     * @param sysUserId user id
+     * @return 统计信息
+     */
     public Statistics genStatReport(Long sysUserId) {
         int statPeriod = 7;
         LocalDate beforeNDay = LocalDate.now().minusDays(statPeriod);

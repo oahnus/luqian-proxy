@@ -3,6 +3,8 @@ package com.github.oahnus.proxyserver.entity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import java.util.Date;
 
@@ -13,6 +15,7 @@ import java.util.Date;
 @Data
 public class SysVersion {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private String version;
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")

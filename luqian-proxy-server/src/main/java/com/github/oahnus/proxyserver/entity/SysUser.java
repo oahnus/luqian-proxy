@@ -4,6 +4,8 @@ import com.alibaba.fastjson.annotation.JSONField;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Transient;
 import javax.validation.constraints.NotEmpty;
@@ -17,12 +19,13 @@ import java.util.List;
 @Data
 public class SysUser {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @NotEmpty
+    @NotEmpty(message = "用户名不能为空")
     private String username;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @JSONField(serialize = false)
-    @NotEmpty
+    @NotEmpty(message = "密码不能为空")
     private String password;
     private String email;
 

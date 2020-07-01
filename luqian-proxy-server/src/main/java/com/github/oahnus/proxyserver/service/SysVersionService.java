@@ -29,4 +29,12 @@ public class SysVersionService extends BaseService<SysVersionMapper, SysVersion,
     public List<String> getVersionNumList() {
         return mapper.versionNumList();
     }
+
+    public String latestClientVersion() {
+        List<String> numList = mapper.versionNumList();
+        if (numList.isEmpty()) {
+            return null;
+        }
+        return numList.get(0);
+    }
 }

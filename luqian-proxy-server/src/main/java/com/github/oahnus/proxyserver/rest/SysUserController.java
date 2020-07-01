@@ -1,6 +1,7 @@
 package com.github.oahnus.proxyserver.rest;
 
 import com.github.oahnus.luqiancommon.dto.RespData;
+import com.github.oahnus.proxyserver.dto.RegisterUser;
 import com.github.oahnus.proxyserver.entity.SysPermission;
 import com.github.oahnus.proxyserver.entity.SysUser;
 import com.github.oahnus.proxyserver.service.SessionService;
@@ -27,8 +28,8 @@ public class SysUserController {
     private SysPermService sysPermService;
 
     @PostMapping("register")
-    public RespData register(@RequestBody @Valid SysUser sysUser) {
-        userService.createUser(sysUser);
+    public RespData register(@RequestBody @Valid RegisterUser registerUser) {
+        userService.createUser(registerUser);
         return RespData.success();
     }
 

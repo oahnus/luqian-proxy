@@ -72,13 +72,10 @@ public class Client implements OfflineListener {
                     retryCount = 0;
 
                     // 发送认证消息
-                    NetMessage netMessage = new NetMessage();
                     ClientChannelManager.setCurBridgeChannel(future.channel());
-                    netMessage.setType(MessageType.AUTH);
-                    netMessage.setUri(ClientConfig.appId + "#" + ClientConfig.appSecret);
 
-                    String clientVersion = ClientConfig.clientVersion;
-                    netMessage.setData(clientVersion.getBytes(StandardCharsets.UTF_8));
+                    byte[] payloads = ClientConfig.clientVersion.getBytes(StandardCharsets.UTF_8);
+                    NetMessage netMessage = NetMessage.auth(ClientConfig.appId, ClientConfig.appSecret, payloads);
 
                     future.channel().writeAndFlush(netMessage);
                 } else {

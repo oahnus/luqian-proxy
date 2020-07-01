@@ -37,6 +37,8 @@ public class SysAccountService extends BaseService<SysAccountMapper, SysAccount,
         account.setTrafficLimit(700*1024*1024L);
 
         save(account);
+        // 将账户信息加入监控
+        TrafficMeasureMonitor.addAccount(userId, account);
     }
 
     @Scheduled(cron = "0 */2 * * * *")

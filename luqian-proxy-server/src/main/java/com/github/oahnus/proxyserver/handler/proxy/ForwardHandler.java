@@ -1,16 +1,15 @@
 package com.github.oahnus.proxyserver.handler.proxy;
 
 import com.github.oahnus.proxyprotocol.Consts;
-import com.github.oahnus.proxyprotocol.MessageType;
 import com.github.oahnus.proxyprotocol.NetMessage;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.Channel;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
@@ -35,10 +34,8 @@ public class ForwardHandler extends SimpleChannelInboundHandler<ByteBuf> {
         buf.readBytes(bytes);
         String channelId = outChannel.attr(Consts.CHANNEL_ID).get();
         String appId = outChannel.attr(Consts.APP_ID).get();
-        NetMessage message = new NetMessage();
-        message.setType(MessageType.PROXY);
-        message.setUri(appId + "#" + channelId);
-        message.setData(bytes);
+
+        NetMessage message = NetMessage.proxy(appId, channelId, bytes);
         proxyChannel.writeAndFlush(message);
     }
 
@@ -70,10 +67,7 @@ public class ForwardHandler extends SimpleChannelInboundHandler<ByteBuf> {
         String appId = tableItem.getAppId();
 
         // 发送连接通知到client
-        NetMessage message = new NetMessage();
-        message.setType(MessageType.CONNECT);
-        message.setUri(appId + "#" + channelId);
-        message.setData(hostPort.getBytes());
+        NetMessage message = NetMessage.connect(appId, channelId, hostPort.getBytes());
         bridgeChannel.writeAndFlush(message);
     }
 
@@ -104,9 +98,7 @@ public class ForwardHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
             proxyChannel.config().setOption(ChannelOption.AUTO_READ, true);
             // 通知客户端，用户连接已经断开
-            NetMessage msg = new NetMessage();
-            msg.setType(MessageType.DISCONNECT);
-            msg.setUri(appId + "#" + channelId);
+            NetMessage msg = NetMessage.disconnect(appId, channelId, null);
             proxyChannel.writeAndFlush(msg);
         }
 

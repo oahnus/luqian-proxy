@@ -33,10 +33,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<ByteBuf> {
         String channelId = serviceChannel.attr(Consts.CHANNEL_ID).get();
         String appId = serviceChannel.attr(Consts.APP_ID).get();
 
-        NetMessage msg = new NetMessage();
-        msg.setType(MessageType.PROXY);
-        msg.setUri(appId + "#" + channelId);
-        msg.setData(bytes);
+        NetMessage msg = NetMessage.proxy(appId, channelId, bytes);
         proxyChannel.writeAndFlush(msg);
     }
 
@@ -62,10 +59,9 @@ public class ServiceHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         Channel proxyChannel = serviceChannel.attr(Consts.NEXT_CHANNEL).get();
         if (proxyChannel != null) {
-            NetMessage proxyMessage = new NetMessage();
-            proxyMessage.setType(MessageType.DISCONNECT);
-            proxyMessage.setUri(appId + "#" + channelId);
+            NetMessage proxyMessage = NetMessage.disconnect(appId, channelId, null);
             proxyChannel.writeAndFlush(proxyMessage);
+
             proxyChannel.attr(Consts.APP_ID).set(appId);
         }
         super.channelInactive(ctx);

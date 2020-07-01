@@ -2,6 +2,8 @@ package com.github.oahnus.proxyserver.entity;
 
 import lombok.Data;
 
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Transient;
 import javax.validation.constraints.*;
@@ -13,6 +15,7 @@ import javax.validation.constraints.*;
 @Data
 public class SysDomain {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     @NotEmpty(message = "name不能为空")
     private String name;

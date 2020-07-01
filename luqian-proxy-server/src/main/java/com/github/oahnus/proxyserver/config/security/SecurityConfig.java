@@ -57,7 +57,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .permitAll()
                 .antMatchers(HttpMethod.OPTIONS)//跨域请求会先进行一次options请求
                 .permitAll()
-                .antMatchers("/login", "/register", "/version/**")
+                .antMatchers(
+                        "/login",
+                        "/register",
+                        "/open/**",
+                        "/version/**")
                 .permitAll()
                 .anyRequest()
                 .authenticated()
@@ -122,6 +126,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 String password = (String) authentication.getCredentials();
 
                 UserDetails userDetails = userDetailsService().loadUserByUsername(name);
+
+                boolean matches = passwordEncoder().matches(password, userDetails.getPassword());
+                if (!matches) {
+                    throw new DisabledException("用户名或密码错误");
+                }
+
                 return new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(), userDetails.getAuthorities());
             }
 

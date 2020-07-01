@@ -22,3 +22,7 @@ spring:
       maxLifetime: 600000
 luqian:
   inject: false
+mybatis:
+  configuration:
+    default-executor-type: simple
+    use-generated-keys: true

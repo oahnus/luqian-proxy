@@ -1,6 +1,9 @@
 package com.github.oahnus.proxyserver.bootstrap;
 
-import com.github.oahnus.proxyprotocol.*;
+import com.github.oahnus.proxyprotocol.IdleCheckHandler;
+import com.github.oahnus.proxyprotocol.NetMessage;
+import com.github.oahnus.proxyprotocol.ProxyProtocolDecoder;
+import com.github.oahnus.proxyprotocol.ProxyProtocolEncoder;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
 import com.github.oahnus.proxyserver.entity.SysDomain;
@@ -10,7 +13,6 @@ import com.github.oahnus.proxyserver.handler.stat.StatisticsHandler;
 import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
-import com.mysql.fabric.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -18,7 +20,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -117,19 +118,19 @@ public class ProxyServer implements Observer {
             return;
         }
         // 发送已启动的代理规则
-        String retMsg = "";
-        retMsg += "\n\nAvailable Proxy List:\n";
-        retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n", "Name", "OutSide Port", "Service Addr", "Domain", "Https");
+        String msg = "";
+        msg += "\n\nAvailable Proxy List:\n";
+        msg += String.format("%-20s%-15s%-30s%-30s%-5s\n", "Name", "OutSide Port", "Service Addr", "Domain", "Https");
         for (ProxyTable p : proxyTableList) {
             if (p.getIsUseDomain()) {
                 SysDomain domain = DomainManager.getActiveDomain(p.getPort());
-                retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
+                msg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
                         p.getName(), "-",
                         p.getServiceAddr(),
                         domain != null ? domain.getDomain() : "-",
                         domain != null ? domain.getHttps() : "-");
             } else {
-                retMsg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
+                msg += String.format("%-20s%-15s%-30s%-30s%-5s\n",
                         p.getName(),
                         p.getPort(),
                         p.getServiceAddr(),
@@ -138,9 +139,7 @@ public class ProxyServer implements Observer {
             }
         }
 
-        NetMessage netMessage = new NetMessage();
-        netMessage.setType(MessageType.INFO);
-        netMessage.setData(retMsg.getBytes());
+        NetMessage netMessage = NetMessage.notify(msg);
         bridgeChannel.writeAndFlush(netMessage);
     }
 

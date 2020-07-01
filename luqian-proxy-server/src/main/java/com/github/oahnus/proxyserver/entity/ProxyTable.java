@@ -3,6 +3,8 @@ package com.github.oahnus.proxyserver.entity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Transient;
 import javax.validation.constraints.NotEmpty;
@@ -16,6 +18,7 @@ import java.util.Date;
 @Data
 public class ProxyTable {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
     private String name; // 代理名称
     @NotEmpty

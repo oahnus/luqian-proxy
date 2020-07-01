@@ -45,6 +45,10 @@ public class TrafficMeasureMonitor {
         return accountMap.get(userId);
     }
 
+    public static void addAccount(Long userId, SysAccount sysAccount) {
+        accountMap.put(userId, sysAccount);
+    }
+
     public static void createStatMeasure(ProxyTable proxyTable) {
         Integer port = proxyTable.getPort();
         Long sysUserId = proxyTable.getSysUserId();

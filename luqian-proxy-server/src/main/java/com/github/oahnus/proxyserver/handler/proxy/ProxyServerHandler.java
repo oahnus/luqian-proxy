@@ -4,17 +4,15 @@ import com.github.oahnus.luqiancommon.util.encrypt.AESUtils;
 import com.github.oahnus.proxyprotocol.Consts;
 import com.github.oahnus.proxyprotocol.MessageType;
 import com.github.oahnus.proxyprotocol.NetMessage;
+import com.github.oahnus.proxyserver.components.ServerCache;
 import com.github.oahnus.proxyserver.config.ProxyTableContainer;
 import com.github.oahnus.proxyserver.entity.ProxyTable;
-import com.github.oahnus.proxyserver.entity.SysDomain;
-import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.manager.ServerChannelManager;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
@@ -131,34 +129,29 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
 
         String secret = ProxyTableContainer.getInstance().getAppSecret(appId);
         if (secret == null) {
-            NetMessage netMessage = new NetMessage();
-            netMessage.setType(MessageType.ERROR);
-            netMessage.setData("AppId Is Not Existed".getBytes());
+            NetMessage netMessage = NetMessage.error("AppId Is Not Existed");
             ctx.channel().writeAndFlush(netMessage);
             ctx.channel().close();
             return;
         }
-        String decrypt = AESUtils.decrypt(appSecret);
+        String decrypt = "";
+        try {
+            decrypt = AESUtils.decrypt(appSecret);
+        } catch (Exception ignore) {
+            // 认证失败
+        }
         if (!decrypt.equals(appId)) {
             // 如果appSecret与appId无法匹配
-            NetMessage netMessage = new NetMessage();
-            netMessage.setType(MessageType.ERROR);
-            netMessage.setData("Authenticate Failed. AppSecret Is Invalid".getBytes());
+            NetMessage netMessage = NetMessage.error("Authenticate Failed. AppSecret Is Invalid");
             ctx.channel().writeAndFlush(netMessage);
             ctx.channel().close();
             return;
         }
-
-        // TODO 检查客户端版本
-        byte[] data = msg.getData();
-        String clientVersion = data == null ? null : new String(data, StandardCharsets.UTF_8);
 
         Channel bridgeChannel = ServerChannelManager.getBridgeChannel(appId);
         if (bridgeChannel != null) {
             // 如果appId已经登录在server端, 向就旧的client发送断线消息
-            NetMessage netMessage = new NetMessage();
-            netMessage.setType(MessageType.ERROR);
-            netMessage.setData("AppId Conflicted. This AppId Has Been Authenticated By Other Client".getBytes());
+            NetMessage netMessage = NetMessage.error("AppId Conflicted. This AppId Has Been Authenticated By Other Client");
             bridgeChannel.writeAndFlush(netMessage);
             bridgeChannel.close();
         }
@@ -178,13 +171,18 @@ public class ProxyServerHandler extends SimpleChannelInboundHandler<NetMessage> 
         ServerChannelManager.addBridgeChannel(appId, ctx.channel());
 
         // 发送认证成功消息
-        String retMsg = "Authenticate Success.";
-
-        NetMessage netMessage = new NetMessage();
-        netMessage.setType(MessageType.INFO);
-        netMessage.setData(retMsg.getBytes());
+        NetMessage netMessage = NetMessage.notify("Authenticate Success.");
         ctx.channel().writeAndFlush(netMessage);
 
+        byte[] data = msg.getData();
+        String clientVersion = data == null ? null : new String(data, StandardCharsets.UTF_8);
+
+        String version = ServerCache.get("version");
+        boolean isLatest = clientVersion != null && clientVersion.equals(version);
+        if (!isLatest) {
+            NetMessage outOfDateMsg = NetMessage.notify("Client Version Is Out Of Date.Latest Version Is " + version);
+            ctx.channel().writeAndFlush(outOfDateMsg);
+        }
         // 刷新配置
         ProxyTableContainer.getInstance().notifyObservers(appId);
     }

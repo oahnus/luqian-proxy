@@ -25,7 +25,7 @@ public class RestExceptionHandler {
         }
         if (cause instanceof AuthException){
             AuthException authException = (AuthException) cause;
-            return RespData.error(RespCode.NO_AUTH, authException.getMessage());
+            return RespData.error(RespCode.SERVICE_ERROR, authException.getMessage());
         }
         return RespData.error(RespCode.INNER_SERVER_ERROR, e.getMessage());
     }

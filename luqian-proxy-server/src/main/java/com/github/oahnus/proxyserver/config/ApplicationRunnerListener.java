@@ -4,16 +4,14 @@ import com.github.oahnus.luqiancommon.biz.QueryBuilder;
 import com.github.oahnus.luqiancommon.util.DateUtils;
 import com.github.oahnus.luqiancommon.util.encrypt.AESUtils;
 import com.github.oahnus.proxyserver.bootstrap.ProxyServer;
+import com.github.oahnus.proxyserver.components.ServerCache;
 import com.github.oahnus.proxyserver.entity.AppTable;
 import com.github.oahnus.proxyserver.entity.StatMeasure;
 import com.github.oahnus.proxyserver.entity.SysAccount;
 import com.github.oahnus.proxyserver.entity.SysDomain;
 import com.github.oahnus.proxyserver.manager.DomainManager;
 import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
-import com.github.oahnus.proxyserver.service.AppTableService;
-import com.github.oahnus.proxyserver.service.StatMeasureService;
-import com.github.oahnus.proxyserver.service.SysAccountService;
-import com.github.oahnus.proxyserver.service.SysDomainService;
+import com.github.oahnus.proxyserver.service.*;
 import com.github.oahnus.proxyserver.utils.JwtUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +49,8 @@ public class ApplicationRunnerListener implements ApplicationRunner {
     private SysAccountService accountService;
     @Autowired
     private SysDomainService sysDomainService;
+    @Autowired
+    private SysVersionService sysVersionService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -81,6 +81,10 @@ public class ApplicationRunnerListener implements ApplicationRunner {
         List<SysDomain> sysDomains = sysDomainService.availableList();
         log.info("Load Domain Size: {}.", sysDomains.size());
         DomainManager.init(sysDomains);
+
+        // 查询最新客户端版本信息
+        String latestClientVersion = sysVersionService.latestClientVersion();
+        ServerCache.put("version", latestClientVersion);
 
         // 启动netty服务
         log.info("Ready Start Proxy Server.");

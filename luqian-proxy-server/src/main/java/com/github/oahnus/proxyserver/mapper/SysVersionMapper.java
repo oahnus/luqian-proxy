@@ -11,6 +11,6 @@ import java.util.List;
  * 11:04.
  */
 public interface SysVersionMapper extends MyMapper<SysVersion> {
-    @Select("SELECT version FORM sys_version ORDER BY date DESC")
+    @Select("SELECT version FROM sys_version ORDER BY date DESC")
     List<String> versionNumList();
 }

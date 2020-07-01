@@ -19,12 +19,9 @@ public class IdleCheckHandler extends IdleStateHandler {
     @Override
     protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
         if (IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT == evt) {
-//            System.out.println("channel write timeout " + ctx.channel());
-            NetMessage proxyMessage = new NetMessage();
-            proxyMessage.setType(MessageType.HEARTBEAT);
-            ctx.channel().writeAndFlush(proxyMessage);
+            // 发送心跳包
+            ctx.channel().writeAndFlush(NetMessage.heartbeat());
         } else if (IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT == evt) {
-//            System.out.println("channel read timeout " + ctx.channel());
             ctx.channel().close();
         }
         super.channelIdle(ctx, evt);

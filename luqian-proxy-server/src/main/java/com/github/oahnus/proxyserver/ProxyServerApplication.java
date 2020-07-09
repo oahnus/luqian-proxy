@@ -1,10 +1,8 @@
 package com.github.oahnus.proxyserver;
 
-import com.github.oahnus.proxyserver.manager.TrafficMeasureMonitor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 import tk.mybatis.spring.annotation.MapperScan;
 
 

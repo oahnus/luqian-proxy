@@ -19,7 +19,7 @@ public class GoAuthFailureHandler implements AuthenticationFailureHandler {
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException e) throws IOException, ServletException {
         response.setHeader("Content-Type", "application/json;charset=utf-8");
-        response.getWriter().print(JSON.toJSONString(RespData.error(RespCode.NO_AUTH, "登录失败，用户名或密码错误！")));
+        response.getWriter().print(JSON.toJSONString(RespData.error(RespCode.PARAM_ERROR, "登录失败，用户名或密码错误！")));
         response.getWriter().flush();
     }
 }

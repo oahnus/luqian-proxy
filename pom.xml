@@ -24,7 +24,7 @@
         <lombok.version>1.18.10</lombok.version>
         <springboot.version>2.1.6.RELEASE</springboot.version>
         <msgback.version>0.6.12</msgback.version>
-        <fastjson.version>1.2.56</fastjson.version>
+        <fastjson.version>1.2.83</fastjson.version>
 
         <slf4j.version>2.0.0-alpha1</slf4j.version>
         <logback.version>1.2.3</logback.version>
